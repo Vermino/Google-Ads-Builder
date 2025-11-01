@@ -36,10 +36,10 @@ export const mockCampaigns: Campaign[] = [
         status: 'active',
         maxCpc: 2.50,
         matchTypeBidding: {
-          type: 'percentage',
-          broad: -20,    // 20% lower than maxCpc
-          phrase: 0,     // Same as maxCpc
-          exact: 15,     // 15% higher than maxCpc
+          broad: { enabled: false, percentage: -75.00 },
+          broadModifier: { enabled: false, percentage: -25.00 },
+          phrase: { enabled: true, percentage: 20.00 },
+          exact: { enabled: true, percentage: 75.00 },
         },
         keywords: [
           { id: 'kw-1-1', text: 'instagram marketing platform' },
@@ -94,10 +94,10 @@ export const mockCampaigns: Campaign[] = [
         status: 'active',
         maxCpc: 2.75,
         matchTypeBidding: {
-          type: 'exact',
-          broad: 2.00,    // Exact price for broad
-          phrase: 2.75,   // Exact price for phrase (same as maxCpc)
-          exact: 3.50,    // Exact price for exact match
+          broad: { enabled: true, percentage: -27.27 },      // $2.00 from $2.75 ≈ -27.27%
+          broadModifier: { enabled: false, percentage: 0 },
+          phrase: { enabled: true, percentage: 0 },          // Same as maxCpc
+          exact: { enabled: true, percentage: 27.27 },       // $3.50 from $2.75 ≈ +27.27%
         },
         keywords: [
           { id: 'kw-2-1', text: 'instagram account manager' },
@@ -256,10 +256,10 @@ export const mockCampaigns: Campaign[] = [
         status: 'active',
         maxCpc: 2.40,
         matchTypeBidding: {
-          type: 'percentage',
-          broad: -15,
-          phrase: 0,
-          exact: 10,
+          broad: { enabled: true, percentage: -15.00 },
+          broadModifier: { enabled: false, percentage: 0 },
+          phrase: { enabled: true, percentage: 0 },
+          exact: { enabled: true, percentage: 10.00 },
         },
         keywords: [
           { id: 'kw-5-1', text: 'instagram automation tool' },

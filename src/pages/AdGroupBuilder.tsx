@@ -1,6 +1,7 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useCampaignStore } from '@/stores/useCampaignStore';
 import AdGroupSettings from '@/components/adgroups/AdGroupSettings';
+import MatchTypeBidding from '@/components/adgroups/MatchTypeBidding';
 import KeywordManager from '@/components/adgroups/KeywordManager';
 import AdList from '@/components/ads/AdList';
 import type { Keyword } from '@/types';
@@ -88,6 +89,12 @@ const AdGroupBuilder = () => {
         <AdGroupSettings
           adGroup={adGroup}
           onUpdate={(updates) => updateAdGroup(campaignId!, adGroupId!, updates)}
+        />
+
+        <MatchTypeBidding
+          maxCpc={adGroup.maxCpc}
+          matchTypeBidding={adGroup.matchTypeBidding}
+          onUpdate={(matchTypeBidding) => updateAdGroup(campaignId!, adGroupId!, { matchTypeBidding })}
         />
 
         <KeywordManager

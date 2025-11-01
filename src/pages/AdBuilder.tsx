@@ -190,8 +190,8 @@ const AdBuilder = () => {
                     key={headline.id}
                     headline={headline}
                     index={index}
-                    onUpdate={(text) =>
-                      updateHeadline(campaignId!, adGroupId!, adId!, headline.id, { text })
+                    onUpdate={(updates) =>
+                      updateHeadline(campaignId!, adGroupId!, adId!, headline.id, updates)
                     }
                     onDelete={() => deleteHeadline(campaignId!, adGroupId!, adId!, headline.id)}
                   />
@@ -224,8 +224,8 @@ const AdBuilder = () => {
                     key={description.id}
                     description={description}
                     index={index}
-                    onUpdate={(text) =>
-                      updateDescription(campaignId!, adGroupId!, adId!, description.id, { text })
+                    onUpdate={(updates) =>
+                      updateDescription(campaignId!, adGroupId!, adId!, description.id, updates)
                     }
                     onDelete={() =>
                       deleteDescription(campaignId!, adGroupId!, adId!, description.id)

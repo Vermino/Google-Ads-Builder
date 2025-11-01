@@ -1,11 +1,31 @@
-import React from 'react';
+import { useState, useMemo } from 'react';
 import type { ResponsiveSearchAd } from '@/types';
+import { generateAdVariations } from '@/utils/adVariations';
 
 export interface AdPreviewProps {
   ad: ResponsiveSearchAd;
 }
 
-const AdPreview: React.FC<AdPreviewProps> = ({ ad }) => {
+const AdPreview = ({ ad }: AdPreviewProps) => {
+  const [currentVariationIndex, setCurrentVariationIndex] = useState(0);
+
+  // Generate 10 variations when headlines or descriptions change
+  const variations = useMemo(() => {
+    return generateAdVariations(ad.headlines, ad.descriptions, 10);
+  }, [ad.headlines, ad.descriptions]);
+
+  const currentVariation = variations[currentVariationIndex] || {
+    headlines: [],
+    descriptions: [],
+  };
+
+  const handleNext = () => {
+    setCurrentVariationIndex((prev) => (prev + 1) % variations.length);
+  };
+
+  const handlePrevious = () => {
+    setCurrentVariationIndex((prev) => (prev - 1 + variations.length) % variations.length);
+  };
   // Extract domain from URL
   const getDomain = (url: string): string => {
     try {
@@ -25,40 +45,63 @@ const AdPreview: React.FC<AdPreviewProps> = ({ ad }) => {
     return parts.join(' › ');
   };
 
-  // Get first 3 headlines with content
+  // Get preview headlines from current variation
   const getPreviewHeadlines = (): string => {
-    const headlines = ad.headlines
-      .filter((h) => h.text.trim().length > 0)
-      .slice(0, 3)
-      .map((h) => h.text);
-
-    return headlines.length > 0 ? headlines.join(' | ') : 'Your headlines will appear here';
+    return currentVariation.headlines.length > 0
+      ? currentVariation.headlines.join(' | ')
+      : 'Your headlines will appear here';
   };
 
-  // Get first 2 descriptions with content
+  // Get preview descriptions from current variation
   const getPreviewDescriptions = (): string => {
-    const descriptions = ad.descriptions
-      .filter((d) => d.text.trim().length > 0)
-      .slice(0, 2)
-      .map((d) => d.text);
-
-    return descriptions.length > 0 ? descriptions.join(' ') : 'Your descriptions will appear here.';
+    return currentVariation.descriptions.length > 0
+      ? currentVariation.descriptions.join(' ')
+      : 'Your descriptions will appear here.';
   };
 
   return (
     <div className="sticky top-24">
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <div className="flex items-center space-x-2 mb-4">
-          <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-            />
-          </svg>
-          <h2 className="text-lg font-semibold text-gray-900">Ad Preview</h2>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center space-x-2">
+            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+              />
+            </svg>
+            <h2 className="text-lg font-semibold text-gray-900">Ad Preview</h2>
+          </div>
+          <div className="flex items-center space-x-2">
+            <span className="text-xs text-gray-600">
+              Variation {currentVariationIndex + 1} of {variations.length}+
+            </span>
+            <div className="flex border border-gray-300 rounded-lg">
+              <button
+                onClick={handlePrevious}
+                className="px-3 py-1 hover:bg-gray-100 transition-colors border-r border-gray-300"
+                title="Previous variation"
+                aria-label="Previous variation"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+              <button
+                onClick={handleNext}
+                className="px-3 py-1 hover:bg-gray-100 transition-colors"
+                title="Next variation"
+                aria-label="Next variation"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* Google-style Ad Preview */}

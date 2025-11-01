@@ -21,12 +21,18 @@ export interface Keyword {
   maxCpc?: number; // Optional override for this specific keyword
 }
 
-// Match type bid modifier (can be exact price or percentage)
+// Individual match type bid settings
+export interface MatchTypeModifier {
+  enabled: boolean;
+  percentage: number; // e.g., -75.00, 20.00, 75.00
+}
+
+// Match type bid modifiers for ad group
 export interface MatchTypeBidModifier {
-  type: 'exact' | 'percentage';
-  broad: number;   // If type=exact: price in dollars, if type=percentage: -25 = -25%
-  phrase: number;  // If type=exact: price in dollars, if type=percentage: 0 = no change
-  exact: number;   // If type=exact: price in dollars, if type=percentage: +25 = +25%
+  broad: MatchTypeModifier;
+  broadModifier: MatchTypeModifier;  // Legacy +keyword syntax (deprecated but still used)
+  phrase: MatchTypeModifier;
+  exact: MatchTypeModifier;
 }
 
 // Responsive Search Ad entity
