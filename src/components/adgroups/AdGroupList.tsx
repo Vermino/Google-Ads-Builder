@@ -5,9 +5,10 @@ import AdGroupCard from './AdGroupCard';
 export interface AdGroupListProps {
   adGroups: AdGroup[];
   onAdGroupClick: (adGroupId: string) => void;
+  onAddClick?: () => void;
 }
 
-const AdGroupList: React.FC<AdGroupListProps> = ({ adGroups, onAdGroupClick }) => {
+const AdGroupList: React.FC<AdGroupListProps> = ({ adGroups, onAdGroupClick, onAddClick }) => {
   return (
     <section>
       <div className="flex items-center justify-between mb-4">
@@ -23,7 +24,7 @@ const AdGroupList: React.FC<AdGroupListProps> = ({ adGroups, onAdGroupClick }) =
           <h2 className="text-lg font-semibold text-gray-900">Ad Groups ({adGroups.length})</h2>
         </div>
         <button
-          onClick={() => console.log('Add ad group')}
+          onClick={onAddClick}
           className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2 transition-colors"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

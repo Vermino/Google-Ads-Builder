@@ -1,12 +1,15 @@
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useCampaignStore } from '@/stores/useCampaignStore';
 import CampaignSettings from '@/components/campaigns/CampaignSettings';
 import GlobalDescriptions from '@/components/campaigns/GlobalDescriptions';
 import AdGroupList from '@/components/adgroups/AdGroupList';
+import NewAdGroupModal from '@/components/modals/NewAdGroupModal';
 
 const CampaignBuilder = () => {
   const { campaignId } = useParams<{ campaignId: string }>();
   const navigate = useNavigate();
+  const [isNewAdGroupModalOpen, setIsNewAdGroupModalOpen] = useState(false);
 
   const campaign = useCampaignStore((state) => state.getCampaign(campaignId!));
   const updateCampaign = useCampaignStore((state) => state.updateCampaign);
@@ -31,6 +34,10 @@ const CampaignBuilder = () => {
 
   const handleAdGroupClick = (adGroupId: string) => {
     navigate(`/campaigns/${campaignId}/ad-groups/${adGroupId}`);
+  };
+
+  const handleAddAdGroup = () => {
+    setIsNewAdGroupModalOpen(true);
   };
 
   return (
@@ -85,8 +92,19 @@ const CampaignBuilder = () => {
           onUpdateCampaign={(updates) => updateCampaign(campaignId!, updates)}
         />
 
-        <AdGroupList adGroups={campaign.adGroups} onAdGroupClick={handleAdGroupClick} />
+        <AdGroupList
+          adGroups={campaign.adGroups}
+          onAdGroupClick={handleAdGroupClick}
+          onAddClick={handleAddAdGroup}
+        />
       </main>
+
+      {/* New Ad Group Modal */}
+      <NewAdGroupModal
+        isOpen={isNewAdGroupModalOpen}
+        onClose={() => setIsNewAdGroupModalOpen(false)}
+        campaignId={campaignId!}
+      />
     </div>
   );
 };

@@ -4,6 +4,7 @@ import { useCampaignStore } from '@/stores/useCampaignStore';
 import CampaignList from '@/components/campaigns/CampaignList';
 import ExportButton from '@/components/common/ExportButton';
 import ExportModal from '@/components/common/ExportModal';
+import NewCampaignModal from '@/components/modals/NewCampaignModal';
 import Toast from '@/components/common/Toast';
 import { exportToGoogleAds } from '@/utils/csvExport';
 import type { ExportOptions } from '@/utils/csvExport';
@@ -12,6 +13,7 @@ const Dashboard = () => {
   const campaigns = useCampaignStore((state) => state.campaigns);
   const navigate = useNavigate();
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [isNewCampaignModalOpen, setIsNewCampaignModalOpen] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   const handleCampaignClick = (campaignId: string) => {
@@ -19,7 +21,7 @@ const Dashboard = () => {
   };
 
   const handleNewCampaign = () => {
-    // TODO: Implement campaign creation in Phase 2
+    setIsNewCampaignModalOpen(true);
   };
 
   const handleExportClick = () => {
@@ -86,6 +88,12 @@ const Dashboard = () => {
 
         <CampaignList campaigns={campaigns} onCampaignClick={handleCampaignClick} />
       </main>
+
+      {/* New Campaign Modal */}
+      <NewCampaignModal
+        isOpen={isNewCampaignModalOpen}
+        onClose={() => setIsNewCampaignModalOpen(false)}
+      />
 
       {/* Export Modal */}
       <ExportModal

@@ -1,14 +1,17 @@
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useCampaignStore } from '@/stores/useCampaignStore';
 import AdGroupSettings from '@/components/adgroups/AdGroupSettings';
 import MatchTypeBidding from '@/components/adgroups/MatchTypeBidding';
 import KeywordManager from '@/components/adgroups/KeywordManager';
 import AdList from '@/components/ads/AdList';
+import NewAdModal from '@/components/modals/NewAdModal';
 import type { Keyword } from '@/types';
 
 const AdGroupBuilder = () => {
   const { campaignId, adGroupId } = useParams<{ campaignId: string; adGroupId: string }>();
   const navigate = useNavigate();
+  const [isNewAdModalOpen, setIsNewAdModalOpen] = useState(false);
 
   const adGroup = useCampaignStore((state) => state.getAdGroup(campaignId!, adGroupId!));
   const updateAdGroup = useCampaignStore((state) => state.updateAdGroup);
@@ -43,6 +46,10 @@ const AdGroupBuilder = () => {
 
   const handleAdClick = (adId: string) => {
     navigate(`/campaigns/${campaignId}/ad-groups/${adGroupId}/ads/${adId}`);
+  };
+
+  const handleAddAd = () => {
+    setIsNewAdModalOpen(true);
   };
 
   return (
@@ -108,8 +115,16 @@ const AdGroupBuilder = () => {
           }
         />
 
-        <AdList ads={adGroup.ads} onAdClick={handleAdClick} />
+        <AdList ads={adGroup.ads} onAdClick={handleAdClick} onAddClick={handleAddAd} />
       </main>
+
+      {/* New Ad Modal */}
+      <NewAdModal
+        isOpen={isNewAdModalOpen}
+        onClose={() => setIsNewAdModalOpen(false)}
+        campaignId={campaignId!}
+        adGroupId={adGroupId!}
+      />
     </div>
   );
 };
