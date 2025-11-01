@@ -1,10 +1,18 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCampaignStore } from '@/stores/useCampaignStore';
 import CampaignList from '@/components/campaigns/CampaignList';
+import ExportButton from '@/components/common/ExportButton';
+import ExportModal from '@/components/common/ExportModal';
+import Toast from '@/components/common/Toast';
+import { exportToGoogleAds } from '@/utils/csvExport';
+import type { ExportOptions } from '@/utils/csvExport';
 
 const Dashboard = () => {
   const campaigns = useCampaignStore((state) => state.campaigns);
   const navigate = useNavigate();
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   const handleCampaignClick = (campaignId: string) => {
     navigate(`/campaigns/${campaignId}`);
@@ -12,6 +20,30 @@ const Dashboard = () => {
 
   const handleNewCampaign = () => {
     // TODO: Implement campaign creation in Phase 2
+  };
+
+  const handleExportClick = () => {
+    setIsExportModalOpen(true);
+  };
+
+  const handleExportModalClose = () => {
+    setIsExportModalOpen(false);
+  };
+
+  const handleExport = async (options: ExportOptions) => {
+    try {
+      await exportToGoogleAds(options);
+      setToast({
+        message: 'Campaign data exported successfully!',
+        type: 'success',
+      });
+    } catch (error) {
+      setToast({
+        message: error instanceof Error ? error.message : 'Failed to export campaigns',
+        type: 'error',
+      });
+      throw error; // Re-throw to let modal handle the error state
+    }
   };
 
   return (
@@ -28,16 +60,19 @@ const Dashboard = () => {
               </div>
               <h1 className="text-2xl font-bold text-gray-900">Google Ads Campaign Builder</h1>
             </div>
-            <button
-              onClick={handleNewCampaign}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium flex items-center space-x-2 hover:bg-blue-700 transition-colors"
-              aria-label="Create new campaign"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              <span>New Campaign</span>
-            </button>
+            <div className="flex items-center gap-3">
+              <ExportButton onClick={handleExportClick} disabled={campaigns.length === 0} />
+              <button
+                onClick={handleNewCampaign}
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium flex items-center space-x-2 hover:bg-blue-700 transition-colors"
+                aria-label="Create new campaign"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                <span>New Campaign</span>
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -51,6 +86,17 @@ const Dashboard = () => {
 
         <CampaignList campaigns={campaigns} onCampaignClick={handleCampaignClick} />
       </main>
+
+      {/* Export Modal */}
+      <ExportModal
+        isOpen={isExportModalOpen}
+        onClose={handleExportModalClose}
+        campaigns={campaigns}
+        onExport={handleExport}
+      />
+
+      {/* Toast Notification */}
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
     </div>
   );
 };
