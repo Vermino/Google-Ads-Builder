@@ -1,19 +1,35 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useCampaignStore } from '@/stores/useCampaignStore';
 import CampaignSettings from '@/components/campaigns/CampaignSettings';
 import GlobalDescriptions from '@/components/campaigns/GlobalDescriptions';
 import AdGroupList from '@/components/adgroups/AdGroupList';
 import NewAdGroupModal from '@/components/modals/NewAdGroupModal';
+import BulkActionToolbar from '@/components/common/BulkActionToolbar';
+import { BulkDeleteConfirmModal, BulkChangeStatusModal } from '@/components/modals';
+import { useToast } from '@/hooks/useToast';
+import type { AdGroup } from '@/types';
 
 const CampaignBuilder = () => {
   const { campaignId } = useParams<{ campaignId: string }>();
   const navigate = useNavigate();
   const [isNewAdGroupModalOpen, setIsNewAdGroupModalOpen] = useState(false);
 
+  // Bulk selection state
+  const [selectedAdGroupIds, setSelectedAdGroupIds] = useState<string[]>([]);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
+
   const campaign = useCampaignStore((state) => state.getCampaign(campaignId!));
   const updateCampaign = useCampaignStore((state) => state.updateCampaign);
   const updateGlobalDescription = useCampaignStore((state) => state.updateGlobalDescription);
+
+  // Bulk operations
+  const deleteAdGroups = useCampaignStore((state) => state.deleteAdGroups);
+  const duplicateAdGroups = useCampaignStore((state) => state.duplicateAdGroups);
+  const updateAdGroupsStatus = useCampaignStore((state) => state.updateAdGroupsStatus);
+
+  const toast = useToast();
 
   if (!campaign) {
     return (
@@ -32,6 +48,83 @@ const CampaignBuilder = () => {
     );
   }
 
+  // Selection handlers
+  const handleSelectOne = useCallback((id: string, checked: boolean) => {
+    if (checked) {
+      setSelectedAdGroupIds((prev) => [...prev, id]);
+    } else {
+      setSelectedAdGroupIds((prev) => prev.filter((agId) => agId !== id));
+    }
+  }, []);
+
+  const handleSelectAll = useCallback((checked: boolean) => {
+    if (checked && campaign) {
+      setSelectedAdGroupIds(campaign.adGroups.map((ag) => ag.id));
+    } else {
+      setSelectedAdGroupIds([]);
+    }
+  }, [campaign]);
+
+  const handleClearSelection = useCallback(() => {
+    setSelectedAdGroupIds([]);
+  }, []);
+
+  // Bulk action handlers
+  const handleBulkDelete = useCallback(() => {
+    setIsDeleteModalOpen(true);
+  }, []);
+
+  const handleConfirmDelete = useCallback(() => {
+    if (campaignId) {
+      deleteAdGroups(campaignId, selectedAdGroupIds);
+      toast.success(`${selectedAdGroupIds.length} ad group${selectedAdGroupIds.length !== 1 ? 's' : ''} deleted`);
+      setSelectedAdGroupIds([]);
+    }
+  }, [campaignId, selectedAdGroupIds, deleteAdGroups, toast]);
+
+  const handleBulkDuplicate = useCallback(() => {
+    if (campaignId) {
+      duplicateAdGroups(campaignId, selectedAdGroupIds);
+      toast.success(`${selectedAdGroupIds.length} ad group${selectedAdGroupIds.length !== 1 ? 's' : ''} duplicated`);
+      setSelectedAdGroupIds([]);
+    }
+  }, [campaignId, selectedAdGroupIds, duplicateAdGroups, toast]);
+
+  const handleBulkChangeStatus = useCallback(() => {
+    setIsStatusModalOpen(true);
+  }, []);
+
+  const handleConfirmChangeStatus = useCallback((status: string) => {
+    if (campaignId) {
+      updateAdGroupsStatus(campaignId, selectedAdGroupIds, status as AdGroup['status']);
+      toast.success(`${selectedAdGroupIds.length} ad group${selectedAdGroupIds.length !== 1 ? 's' : ''} updated`);
+      setSelectedAdGroupIds([]);
+    }
+  }, [campaignId, selectedAdGroupIds, updateAdGroupsStatus, toast]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl+A or Cmd+A to select all
+      if ((e.ctrlKey || e.metaKey) && e.key === 'a' && campaign && campaign.adGroups.length > 0) {
+        e.preventDefault();
+        handleSelectAll(true);
+      }
+      // Escape to clear selection
+      if (e.key === 'Escape' && selectedAdGroupIds.length > 0) {
+        handleClearSelection();
+      }
+      // Delete key to delete selected
+      if (e.key === 'Delete' && selectedAdGroupIds.length > 0) {
+        e.preventDefault();
+        handleBulkDelete();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [campaign, selectedAdGroupIds, handleSelectAll, handleClearSelection, handleBulkDelete]);
+
   const handleAdGroupClick = (adGroupId: string) => {
     navigate(`/campaigns/${campaignId}/ad-groups/${adGroupId}`);
   };
@@ -39,6 +132,11 @@ const CampaignBuilder = () => {
   const handleAddAdGroup = () => {
     setIsNewAdGroupModalOpen(true);
   };
+
+  // Get selected ad group names for modals
+  const selectedAdGroupNames = campaign?.adGroups
+    .filter((ag) => selectedAdGroupIds.includes(ag.id))
+    .map((ag) => ag.name) || [];
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -96,14 +194,52 @@ const CampaignBuilder = () => {
           adGroups={campaign.adGroups}
           onAdGroupClick={handleAdGroupClick}
           onAddClick={handleAddAdGroup}
+          selectedIds={selectedAdGroupIds}
+          onSelectOne={handleSelectOne}
+          onSelectAll={handleSelectAll}
+          isSelectionMode={selectedAdGroupIds.length > 0}
         />
       </main>
+
+      {/* Bulk Action Toolbar */}
+      {selectedAdGroupIds.length > 0 && (
+        <BulkActionToolbar
+          selectedCount={selectedAdGroupIds.length}
+          onDelete={handleBulkDelete}
+          onDuplicate={handleBulkDuplicate}
+          onChangeStatus={handleBulkChangeStatus as any}
+          onCancel={handleClearSelection}
+          entityType="ad group"
+          statusType="adGroup"
+        />
+      )}
 
       {/* New Ad Group Modal */}
       <NewAdGroupModal
         isOpen={isNewAdGroupModalOpen}
         onClose={() => setIsNewAdGroupModalOpen(false)}
         campaignId={campaignId!}
+      />
+
+      {/* Bulk Delete Confirm Modal */}
+      <BulkDeleteConfirmModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleConfirmDelete}
+        itemCount={selectedAdGroupIds.length}
+        itemNames={selectedAdGroupNames}
+        entityType="ad group"
+      />
+
+      {/* Bulk Change Status Modal */}
+      <BulkChangeStatusModal
+        isOpen={isStatusModalOpen}
+        onClose={() => setIsStatusModalOpen(false)}
+        onConfirm={handleConfirmChangeStatus}
+        itemCount={selectedAdGroupIds.length}
+        itemNames={selectedAdGroupNames}
+        entityType="ad group"
+        statusType="adGroup"
       />
     </div>
   );

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useCampaignStore } from '@/stores/useCampaignStore';
 import AdGroupSettings from '@/components/adgroups/AdGroupSettings';
@@ -6,18 +6,33 @@ import MatchTypeBidding from '@/components/adgroups/MatchTypeBidding';
 import KeywordManager from '@/components/adgroups/KeywordManager';
 import AdList from '@/components/ads/AdList';
 import NewAdModal from '@/components/modals/NewAdModal';
-import type { Keyword } from '@/types';
+import BulkActionToolbar from '@/components/common/BulkActionToolbar';
+import { BulkDeleteConfirmModal, BulkChangeStatusModal } from '@/components/modals';
+import { useToast } from '@/hooks/useToast';
+import type { Keyword, ResponsiveSearchAd } from '@/types';
 
 const AdGroupBuilder = () => {
   const { campaignId, adGroupId } = useParams<{ campaignId: string; adGroupId: string }>();
   const navigate = useNavigate();
   const [isNewAdModalOpen, setIsNewAdModalOpen] = useState(false);
 
+  // Bulk selection state
+  const [selectedAdIds, setSelectedAdIds] = useState<string[]>([]);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
+
   const adGroup = useCampaignStore((state) => state.getAdGroup(campaignId!, adGroupId!));
   const updateAdGroup = useCampaignStore((state) => state.updateAdGroup);
   const addKeyword = useCampaignStore((state) => state.addKeyword);
   const updateKeyword = useCampaignStore((state) => state.updateKeyword);
   const deleteKeyword = useCampaignStore((state) => state.deleteKeyword);
+
+  // Bulk operations
+  const deleteAds = useCampaignStore((state) => state.deleteAds);
+  const duplicateAds = useCampaignStore((state) => state.duplicateAds);
+  const updateAdsStatus = useCampaignStore((state) => state.updateAdsStatus);
+
+  const toast = useToast();
 
   if (!adGroup) {
     return (
@@ -36,6 +51,83 @@ const AdGroupBuilder = () => {
     );
   }
 
+  // Selection handlers
+  const handleSelectOne = useCallback((id: string, checked: boolean) => {
+    if (checked) {
+      setSelectedAdIds((prev) => [...prev, id]);
+    } else {
+      setSelectedAdIds((prev) => prev.filter((adId) => adId !== id));
+    }
+  }, []);
+
+  const handleSelectAll = useCallback((checked: boolean) => {
+    if (checked && adGroup) {
+      setSelectedAdIds(adGroup.ads.map((ad) => ad.id));
+    } else {
+      setSelectedAdIds([]);
+    }
+  }, [adGroup]);
+
+  const handleClearSelection = useCallback(() => {
+    setSelectedAdIds([]);
+  }, []);
+
+  // Bulk action handlers
+  const handleBulkDelete = useCallback(() => {
+    setIsDeleteModalOpen(true);
+  }, []);
+
+  const handleConfirmDelete = useCallback(() => {
+    if (campaignId && adGroupId) {
+      deleteAds(campaignId, adGroupId, selectedAdIds);
+      toast.success(`${selectedAdIds.length} ad${selectedAdIds.length !== 1 ? 's' : ''} deleted`);
+      setSelectedAdIds([]);
+    }
+  }, [campaignId, adGroupId, selectedAdIds, deleteAds, toast]);
+
+  const handleBulkDuplicate = useCallback(() => {
+    if (campaignId && adGroupId) {
+      duplicateAds(campaignId, adGroupId, selectedAdIds);
+      toast.success(`${selectedAdIds.length} ad${selectedAdIds.length !== 1 ? 's' : ''} duplicated`);
+      setSelectedAdIds([]);
+    }
+  }, [campaignId, adGroupId, selectedAdIds, duplicateAds, toast]);
+
+  const handleBulkChangeStatus = useCallback(() => {
+    setIsStatusModalOpen(true);
+  }, []);
+
+  const handleConfirmChangeStatus = useCallback((status: string) => {
+    if (campaignId && adGroupId) {
+      updateAdsStatus(campaignId, adGroupId, selectedAdIds, status as ResponsiveSearchAd['status']);
+      toast.success(`${selectedAdIds.length} ad${selectedAdIds.length !== 1 ? 's' : ''} updated`);
+      setSelectedAdIds([]);
+    }
+  }, [campaignId, adGroupId, selectedAdIds, updateAdsStatus, toast]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl+A or Cmd+A to select all
+      if ((e.ctrlKey || e.metaKey) && e.key === 'a' && adGroup && adGroup.ads.length > 0) {
+        e.preventDefault();
+        handleSelectAll(true);
+      }
+      // Escape to clear selection
+      if (e.key === 'Escape' && selectedAdIds.length > 0) {
+        handleClearSelection();
+      }
+      // Delete key to delete selected
+      if (e.key === 'Delete' && selectedAdIds.length > 0) {
+        e.preventDefault();
+        handleBulkDelete();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [adGroup, selectedAdIds, handleSelectAll, handleClearSelection, handleBulkDelete]);
+
   const handleAddKeyword = () => {
     const newKeyword: Keyword = {
       id: `kw-${Date.now()}`,
@@ -51,6 +143,11 @@ const AdGroupBuilder = () => {
   const handleAddAd = () => {
     setIsNewAdModalOpen(true);
   };
+
+  // Get selected ad names for modals
+  const selectedAdNames = adGroup?.ads
+    .filter((ad) => selectedAdIds.includes(ad.id))
+    .map((ad) => ad.name) || [];
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -115,8 +212,29 @@ const AdGroupBuilder = () => {
           }
         />
 
-        <AdList ads={adGroup.ads} onAdClick={handleAdClick} onAddClick={handleAddAd} />
+        <AdList
+          ads={adGroup.ads}
+          onAdClick={handleAdClick}
+          onAddClick={handleAddAd}
+          selectedIds={selectedAdIds}
+          onSelectOne={handleSelectOne}
+          onSelectAll={handleSelectAll}
+          isSelectionMode={selectedAdIds.length > 0}
+        />
       </main>
+
+      {/* Bulk Action Toolbar */}
+      {selectedAdIds.length > 0 && (
+        <BulkActionToolbar
+          selectedCount={selectedAdIds.length}
+          onDelete={handleBulkDelete}
+          onDuplicate={handleBulkDuplicate}
+          onChangeStatus={handleBulkChangeStatus as any}
+          onCancel={handleClearSelection}
+          entityType="ad"
+          statusType="ad"
+        />
+      )}
 
       {/* New Ad Modal */}
       <NewAdModal
@@ -124,6 +242,27 @@ const AdGroupBuilder = () => {
         onClose={() => setIsNewAdModalOpen(false)}
         campaignId={campaignId!}
         adGroupId={adGroupId!}
+      />
+
+      {/* Bulk Delete Confirm Modal */}
+      <BulkDeleteConfirmModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleConfirmDelete}
+        itemCount={selectedAdIds.length}
+        itemNames={selectedAdNames}
+        entityType="ad"
+      />
+
+      {/* Bulk Change Status Modal */}
+      <BulkChangeStatusModal
+        isOpen={isStatusModalOpen}
+        onClose={() => setIsStatusModalOpen(false)}
+        onConfirm={handleConfirmChangeStatus}
+        itemCount={selectedAdIds.length}
+        itemNames={selectedAdNames}
+        entityType="ad"
+        statusType="ad"
       />
     </div>
   );

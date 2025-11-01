@@ -48,6 +48,16 @@ interface CampaignStore {
 
   // Global Description Management
   updateGlobalDescription: (campaignId: string, descriptionId: string, updates: Partial<GlobalDescription>) => void;
+
+  // Bulk Ad Group Operations
+  deleteAdGroups: (campaignId: string, adGroupIds: string[]) => void;
+  duplicateAdGroups: (campaignId: string, adGroupIds: string[]) => void;
+  updateAdGroupsStatus: (campaignId: string, adGroupIds: string[], status: AdGroup['status']) => void;
+
+  // Bulk Ad Operations
+  deleteAds: (campaignId: string, adGroupId: string, adIds: string[]) => void;
+  duplicateAds: (campaignId: string, adGroupId: string, adIds: string[]) => void;
+  updateAdsStatus: (campaignId: string, adGroupId: string, adIds: string[], status: ResponsiveSearchAd['status']) => void;
 }
 
 export const useCampaignStore = create<CampaignStore>((set, get) => ({
@@ -452,6 +462,158 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
               ...c,
               globalDescriptions: c.globalDescriptions.map((gd) =>
                 gd.id === descriptionId ? { ...gd, ...updates } : gd
+              ),
+              updatedAt: new Date().toISOString(),
+            }
+          : c
+      ),
+    }));
+  },
+
+  // Bulk Ad Group Operations
+  deleteAdGroups: (campaignId, adGroupIds) => {
+    set((state) => ({
+      campaigns: state.campaigns.map((c) =>
+        c.id === campaignId
+          ? {
+              ...c,
+              adGroups: c.adGroups.filter((ag) => !adGroupIds.includes(ag.id)),
+              updatedAt: new Date().toISOString(),
+            }
+          : c
+      ),
+    }));
+  },
+
+  duplicateAdGroups: (campaignId, adGroupIds) => {
+    set((state) => ({
+      campaigns: state.campaigns.map((c) => {
+        if (c.id !== campaignId) return c;
+
+        const adGroupsToDuplicate = c.adGroups.filter((ag) => adGroupIds.includes(ag.id));
+        const duplicates = adGroupsToDuplicate.map((ag) => ({
+          ...ag,
+          id: `ag-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          name: `${ag.name} (Copy)`,
+          ads: ag.ads.map((ad) => ({
+            ...ad,
+            id: `ad-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          })),
+          keywords: ag.keywords.map((kw) => ({
+            ...kw,
+            id: `kw-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          })),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        }));
+
+        return {
+          ...c,
+          adGroups: [...c.adGroups, ...duplicates],
+          updatedAt: new Date().toISOString(),
+        };
+      }),
+    }));
+  },
+
+  updateAdGroupsStatus: (campaignId, adGroupIds, status) => {
+    set((state) => ({
+      campaigns: state.campaigns.map((c) =>
+        c.id === campaignId
+          ? {
+              ...c,
+              adGroups: c.adGroups.map((ag) =>
+                adGroupIds.includes(ag.id)
+                  ? { ...ag, status, updatedAt: new Date().toISOString() }
+                  : ag
+              ),
+              updatedAt: new Date().toISOString(),
+            }
+          : c
+      ),
+    }));
+  },
+
+  // Bulk Ad Operations
+  deleteAds: (campaignId, adGroupId, adIds) => {
+    set((state) => ({
+      campaigns: state.campaigns.map((c) =>
+        c.id === campaignId
+          ? {
+              ...c,
+              adGroups: c.adGroups.map((ag) =>
+                ag.id === adGroupId
+                  ? {
+                      ...ag,
+                      ads: ag.ads.filter((ad) => !adIds.includes(ad.id)),
+                      updatedAt: new Date().toISOString(),
+                    }
+                  : ag
+              ),
+              updatedAt: new Date().toISOString(),
+            }
+          : c
+      ),
+    }));
+  },
+
+  duplicateAds: (campaignId, adGroupId, adIds) => {
+    set((state) => ({
+      campaigns: state.campaigns.map((c) => {
+        if (c.id !== campaignId) return c;
+
+        return {
+          ...c,
+          adGroups: c.adGroups.map((ag) => {
+            if (ag.id !== adGroupId) return ag;
+
+            const adsToDuplicate = ag.ads.filter((ad) => adIds.includes(ad.id));
+            const duplicates = adsToDuplicate.map((ad) => ({
+              ...ad,
+              id: `ad-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+              name: `${ad.name} (Copy)`,
+              headlines: ad.headlines.map((h) => ({
+                ...h,
+                id: `hl-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+              })),
+              descriptions: ad.descriptions.map((d) => ({
+                ...d,
+                id: `desc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+              })),
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            }));
+
+            return {
+              ...ag,
+              ads: [...ag.ads, ...duplicates],
+              updatedAt: new Date().toISOString(),
+            };
+          }),
+          updatedAt: new Date().toISOString(),
+        };
+      }),
+    }));
+  },
+
+  updateAdsStatus: (campaignId, adGroupId, adIds, status) => {
+    set((state) => ({
+      campaigns: state.campaigns.map((c) =>
+        c.id === campaignId
+          ? {
+              ...c,
+              adGroups: c.adGroups.map((ag) =>
+                ag.id === adGroupId
+                  ? {
+                      ...ag,
+                      ads: ag.ads.map((ad) =>
+                        adIds.includes(ad.id)
+                          ? { ...ad, status, updatedAt: new Date().toISOString() }
+                          : ad
+                      ),
+                      updatedAt: new Date().toISOString(),
+                    }
+                  : ag
               ),
               updatedAt: new Date().toISOString(),
             }

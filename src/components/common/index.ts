@@ -6,6 +6,7 @@ export { default as Card } from './Card';
 export { default as Badge } from './Badge';
 export { default as Modal } from './Modal';
 export { default as PageHeader } from './PageHeader';
+export { default as BulkActionToolbar } from './BulkActionToolbar';
 
 // Export types
 export type { ButtonProps, ButtonVariant, ButtonSize } from './Button';
@@ -15,3 +16,4 @@ export type { CardProps } from './Card';
 export type { BadgeProps, BadgeVariant } from './Badge';
 export type { ModalProps } from './Modal';
 export type { PageHeaderProps } from './PageHeader';
+export type { BulkActionToolbarProps } from './BulkActionToolbar';
