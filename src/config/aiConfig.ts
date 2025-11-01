@@ -5,12 +5,36 @@
  * Manages API keys, model settings, and generation parameters.
  */
 
+/**
+ * Get API key from environment or localStorage
+ */
+function getApiKey(envKey: string, storageKey: string): string {
+  // Try environment variable first
+  const envValue = import.meta.env[envKey];
+  if (envValue) return envValue;
+
+  // Fall back to localStorage
+  try {
+    const stored = localStorage.getItem(storageKey);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      return parsed || '';
+    }
+  } catch (error) {
+    console.warn(`Failed to read ${storageKey} from localStorage:`, error);
+  }
+
+  return '';
+}
+
 export const AI_CONFIG = {
   /**
    * OpenAI Configuration
    */
   openai: {
-    apiKey: import.meta.env.VITE_OPENAI_API_KEY || '',
+    get apiKey() {
+      return getApiKey('VITE_OPENAI_API_KEY', 'ai_openai_key');
+    },
     model: 'gpt-4-turbo-preview',
     maxTokens: 500,
     temperature: 0.7,
@@ -20,7 +44,9 @@ export const AI_CONFIG = {
    * Claude (Anthropic) Configuration
    */
   claude: {
-    apiKey: import.meta.env.VITE_CLAUDE_API_KEY || '',
+    get apiKey() {
+      return getApiKey('VITE_CLAUDE_API_KEY', 'ai_claude_key');
+    },
     model: 'claude-3-5-sonnet-20241022',
     maxTokens: 500,
   },

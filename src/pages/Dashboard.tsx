@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Settings } from 'lucide-react';
 import { useCampaignStore } from '@/stores/useCampaignStore';
 import CampaignList from '@/components/campaigns/CampaignList';
 import ExportButton from '@/components/common/ExportButton';
@@ -63,6 +64,14 @@ const Dashboard = () => {
               <h1 className="text-2xl font-bold text-gray-900">Google Ads Campaign Builder</h1>
             </div>
             <div className="flex items-center gap-3">
+              <button
+                onClick={() => navigate('/settings')}
+                className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                aria-label="Settings"
+                title="Settings"
+              >
+                <Settings className="w-5 h-5" />
+              </button>
               <ExportButton onClick={handleExportClick} disabled={campaigns.length === 0} />
               <button
                 onClick={handleNewCampaign}

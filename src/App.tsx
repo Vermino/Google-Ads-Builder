@@ -6,6 +6,7 @@ const Dashboard = lazy(() => import('./pages/Dashboard'));
 const CampaignBuilder = lazy(() => import('./pages/CampaignBuilder'));
 const AdGroupBuilder = lazy(() => import('./pages/AdGroupBuilder'));
 const AdBuilder = lazy(() => import('./pages/AdBuilder'));
+const Settings = lazy(() => import('./pages/Settings'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 
 // Loading component
@@ -24,6 +25,7 @@ function App() {
       <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route path="/" element={<Dashboard />} />
+          <Route path="/settings" element={<Settings />} />
           <Route path="/campaigns/:campaignId" element={<CampaignBuilder />} />
           <Route path="/campaigns/:campaignId/ad-groups/:adGroupId" element={<AdGroupBuilder />} />
           <Route path="/campaigns/:campaignId/ad-groups/:adGroupId/ads/:adId" element={<AdBuilder />} />

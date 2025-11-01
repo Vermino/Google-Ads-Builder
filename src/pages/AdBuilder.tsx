@@ -1,4 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import { useCampaignStore } from '@/stores/useCampaignStore';
 import { useToast } from '@/hooks/useToast';
 import HeadlineInput from '@/components/ads/HeadlineInput';
@@ -6,13 +7,18 @@ import DescriptionInput from '@/components/ads/DescriptionInput';
 import AdPreview from '@/components/ads/AdPreview';
 import CharacterCounter from '@/components/common/CharacterCounter';
 import Toast from '@/components/common/Toast';
+import AIGenerateButton from '@/components/ads/AIGenerateButton';
+import AIGenerationModal from '@/components/modals/AIGenerationModal';
 import { CHAR_LIMITS, MAX_COUNTS } from '@/utils/constants';
 import type { Headline, Description } from '@/types';
 
 const AdBuilder = () => {
   const { campaignId, adGroupId, adId } = useParams<{ campaignId: string; adGroupId: string; adId: string }>();
   const navigate = useNavigate();
-  const { toasts, warning, removeToast } = useToast();
+  const { toasts, warning, success, removeToast } = useToast();
+
+  // AI Generation Modal state
+  const [isAIModalOpen, setIsAIModalOpen] = useState(false);
 
   const ad = useCampaignStore((state) => state.getAd(campaignId!, adGroupId!, adId!));
   const updateAd = useCampaignStore((state) => state.updateAd);
@@ -66,6 +72,47 @@ const AdBuilder = () => {
     addDescription(campaignId!, adGroupId!, adId!, newDescription);
   };
 
+  // Handle AI generated copy
+  const handleUseGeneratedCopy = (headlines: string[], descriptions: string[]) => {
+    let addedCount = 0;
+
+    // Add headlines
+    headlines.forEach((text) => {
+      if (ad.headlines.length + addedCount < MAX_COUNTS.HEADLINES) {
+        const newHeadline: Headline = {
+          id: `h-${Date.now()}-${Math.random()}`,
+          text,
+        };
+        addHeadline(campaignId!, adGroupId!, adId!, newHeadline);
+        addedCount++;
+      }
+    });
+
+    // Add descriptions
+    descriptions.forEach((text) => {
+      const newDescription: Description = {
+        id: `d-${Date.now()}-${Math.random()}`,
+        text,
+      };
+      addDescription(campaignId!, adGroupId!, adId!, newDescription);
+    });
+
+    success(`Added ${headlines.length} headlines and ${descriptions.length} descriptions to your ad`);
+  };
+
+  // Keyboard shortcut: Ctrl/Cmd + G to open AI modal
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'g') {
+        e.preventDefault();
+        setIsAIModalOpen(true);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -94,15 +141,7 @@ const AdBuilder = () => {
               >
                 Save
               </button>
-              <button
-                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center space-x-2 transition-colors"
-                aria-label="Generate ad copy with AI"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-                <span>Generate with AI</span>
-              </button>
+              <AIGenerateButton onClick={() => setIsAIModalOpen(true)} />
             </div>
           </div>
         </div>
@@ -252,6 +291,15 @@ const AdBuilder = () => {
           onClose={() => removeToast(toast.id)}
         />
       ))}
+
+      {/* AI Generation Modal */}
+      <AIGenerationModal
+        isOpen={isAIModalOpen}
+        onClose={() => setIsAIModalOpen(false)}
+        onUseGenerated={handleUseGeneratedCopy}
+        initialBusinessDescription=""
+        initialKeywords={[]}
+      />
     </div>
   );
 };
