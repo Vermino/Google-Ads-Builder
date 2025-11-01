@@ -1,4 +1,3 @@
-import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useCampaignStore } from '@/stores/useCampaignStore';
 import AdGroupSettings from '@/components/adgroups/AdGroupSettings';
@@ -6,7 +5,7 @@ import KeywordManager from '@/components/adgroups/KeywordManager';
 import AdList from '@/components/ads/AdList';
 import type { Keyword } from '@/types';
 
-const AdGroupBuilder: React.FC = () => {
+const AdGroupBuilder = () => {
   const { campaignId, adGroupId } = useParams<{ campaignId: string; adGroupId: string }>();
   const navigate = useNavigate();
 
@@ -60,8 +59,9 @@ const AdGroupBuilder: React.FC = () => {
               <button
                 onClick={() => navigate(`/campaigns/${campaignId}`)}
                 className="text-gray-500 hover:text-gray-700"
+                aria-label="Back to campaign"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                 </svg>
               </button>
@@ -71,10 +71,16 @@ const AdGroupBuilder: React.FC = () => {
               </div>
             </div>
             <div className="flex items-center space-x-3">
-              <button className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
+              <button
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                aria-label="Save ad group"
+              >
                 Save
               </button>
-              <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+              <button
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                aria-label="Export ad group to CSV"
+              >
                 Export CSV
               </button>
             </div>

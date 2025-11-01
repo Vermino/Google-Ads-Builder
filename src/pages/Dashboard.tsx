@@ -1,9 +1,8 @@
-import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCampaignStore } from '@/stores/useCampaignStore';
 import CampaignList from '@/components/campaigns/CampaignList';
 
-const Dashboard: React.FC = () => {
+const Dashboard = () => {
   const campaigns = useCampaignStore((state) => state.campaigns);
   const navigate = useNavigate();
 
@@ -12,8 +11,7 @@ const Dashboard: React.FC = () => {
   };
 
   const handleNewCampaign = () => {
-    console.log('Create new campaign');
-    // Will be implemented in later phase
+    // TODO: Implement campaign creation in Phase 2
   };
 
   return (
@@ -33,8 +31,9 @@ const Dashboard: React.FC = () => {
             <button
               onClick={handleNewCampaign}
               className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium flex items-center space-x-2 hover:bg-blue-700 transition-colors"
+              aria-label="Create new campaign"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
               </svg>
               <span>New Campaign</span>

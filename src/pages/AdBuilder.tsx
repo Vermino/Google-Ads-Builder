@@ -1,16 +1,18 @@
-import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useCampaignStore } from '@/stores/useCampaignStore';
+import { useToast } from '@/hooks/useToast';
 import HeadlineInput from '@/components/ads/HeadlineInput';
 import DescriptionInput from '@/components/ads/DescriptionInput';
 import AdPreview from '@/components/ads/AdPreview';
 import CharacterCounter from '@/components/common/CharacterCounter';
+import Toast from '@/components/common/Toast';
 import { CHAR_LIMITS, MAX_COUNTS } from '@/utils/constants';
 import type { Headline, Description } from '@/types';
 
-const AdBuilder: React.FC = () => {
+const AdBuilder = () => {
   const { campaignId, adGroupId, adId } = useParams<{ campaignId: string; adGroupId: string; adId: string }>();
   const navigate = useNavigate();
+  const { toasts, warning, removeToast } = useToast();
 
   const ad = useCampaignStore((state) => state.getAd(campaignId!, adGroupId!, adId!));
   const updateAd = useCampaignStore((state) => state.updateAd);
@@ -40,7 +42,7 @@ const AdBuilder: React.FC = () => {
 
   const handleAddHeadline = () => {
     if (ad.headlines.length >= MAX_COUNTS.HEADLINES) {
-      alert(`Maximum ${MAX_COUNTS.HEADLINES} headlines allowed`);
+      warning(`Maximum ${MAX_COUNTS.HEADLINES} headlines allowed`);
       return;
     }
 
@@ -53,7 +55,7 @@ const AdBuilder: React.FC = () => {
 
   const handleAddDescription = () => {
     if (ad.descriptions.length >= MAX_COUNTS.DESCRIPTIONS) {
-      alert(`Maximum ${MAX_COUNTS.DESCRIPTIONS} descriptions allowed`);
+      warning(`Maximum ${MAX_COUNTS.DESCRIPTIONS} descriptions allowed`);
       return;
     }
 
@@ -74,8 +76,9 @@ const AdBuilder: React.FC = () => {
               <button
                 onClick={() => navigate(`/campaigns/${campaignId}/ad-groups/${adGroupId}`)}
                 className="text-gray-500 hover:text-gray-700"
+                aria-label="Back to ad group"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                 </svg>
               </button>
@@ -85,11 +88,17 @@ const AdBuilder: React.FC = () => {
               </div>
             </div>
             <div className="flex items-center space-x-3">
-              <button className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
+              <button
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                aria-label="Save ad"
+              >
                 Save
               </button>
-              <button className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center space-x-2 transition-colors">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <button
+                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center space-x-2 transition-colors"
+                aria-label="Generate ad copy with AI"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
                 <span>Generate with AI</span>
@@ -166,8 +175,9 @@ const AdBuilder: React.FC = () => {
                   onClick={handleAddHeadline}
                   disabled={ad.headlines.length >= MAX_COUNTS.HEADLINES}
                   className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center space-x-1 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  aria-label="Add new headline"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                   </svg>
                   <span>Add Headline</span>
@@ -199,8 +209,9 @@ const AdBuilder: React.FC = () => {
                   onClick={handleAddDescription}
                   disabled={ad.descriptions.length >= MAX_COUNTS.DESCRIPTIONS}
                   className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center space-x-1 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  aria-label="Add new description"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                   </svg>
                   <span>Add Description</span>
@@ -231,6 +242,16 @@ const AdBuilder: React.FC = () => {
           </div>
         </div>
       </main>
+
+      {/* Toast Notifications */}
+      {toasts.map((toast) => (
+        <Toast
+          key={toast.id}
+          message={toast.message}
+          type={toast.type}
+          onClose={() => removeToast(toast.id)}
+        />
+      ))}
     </div>
   );
 };
