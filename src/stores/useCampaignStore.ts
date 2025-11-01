@@ -29,7 +29,6 @@ interface CampaignStore {
   addKeyword: (campaignId: string, adGroupId: string, keyword: Keyword) => void;
   updateKeyword: (campaignId: string, adGroupId: string, keywordId: string, updates: Partial<Keyword>) => void;
   deleteKeyword: (campaignId: string, adGroupId: string, keywordId: string) => void;
-  toggleMatchType: (campaignId: string, adGroupId: string, keywordId: string, matchType: 'broad' | 'phrase' | 'exact') => void;
 
   // Ad CRUD
   getAd: (campaignId: string, adGroupId: string, adId: string) => ResponsiveSearchAd | undefined;
@@ -39,12 +38,12 @@ interface CampaignStore {
 
   // Headline Management
   addHeadline: (campaignId: string, adGroupId: string, adId: string, headline: Headline) => void;
-  updateHeadline: (campaignId: string, adGroupId: string, adId: string, headlineId: string, text: string) => void;
+  updateHeadline: (campaignId: string, adGroupId: string, adId: string, headlineId: string, updates: Partial<Headline>) => void;
   deleteHeadline: (campaignId: string, adGroupId: string, adId: string, headlineId: string) => void;
 
   // Description Management
   addDescription: (campaignId: string, adGroupId: string, adId: string, description: Description) => void;
-  updateDescription: (campaignId: string, adGroupId: string, adId: string, descriptionId: string, text: string) => void;
+  updateDescription: (campaignId: string, adGroupId: string, adId: string, descriptionId: string, updates: Partial<Description>) => void;
   deleteDescription: (campaignId: string, adGroupId: string, adId: string, descriptionId: string) => void;
 
   // Global Description Management
@@ -197,37 +196,6 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
     }));
   },
 
-  toggleMatchType: (campaignId, adGroupId, keywordId, matchType) => {
-    set((state) => ({
-      campaigns: state.campaigns.map((c) =>
-        c.id === campaignId
-          ? {
-              ...c,
-              adGroups: c.adGroups.map((ag) =>
-                ag.id === adGroupId
-                  ? {
-                      ...ag,
-                      keywords: ag.keywords.map((k) =>
-                        k.id === keywordId
-                          ? {
-                              ...k,
-                              matchTypes: {
-                                ...k.matchTypes,
-                                [matchType]: !k.matchTypes[matchType],
-                              },
-                            }
-                          : k
-                      ),
-                      updatedAt: new Date().toISOString(),
-                    }
-                  : ag
-              ),
-            }
-          : c
-      ),
-    }));
-  },
-
   // Ad CRUD
   getAd: (campaignId, adGroupId, adId) => {
     const adGroup = get().getAdGroup(campaignId, adGroupId);
@@ -330,7 +298,7 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
     }));
   },
 
-  updateHeadline: (campaignId, adGroupId, adId, headlineId, text) => {
+  updateHeadline: (campaignId, adGroupId, adId, headlineId, updates) => {
     set((state) => ({
       campaigns: state.campaigns.map((c) =>
         c.id === campaignId
@@ -345,7 +313,7 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
                           ? {
                               ...ad,
                               headlines: ad.headlines.map((h) =>
-                                h.id === headlineId ? { ...h, text } : h
+                                h.id === headlineId ? { ...h, ...updates } : h
                               ),
                               updatedAt: new Date().toISOString(),
                             }
@@ -417,7 +385,7 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
     }));
   },
 
-  updateDescription: (campaignId, adGroupId, adId, descriptionId, text) => {
+  updateDescription: (campaignId, adGroupId, adId, descriptionId, updates) => {
     set((state) => ({
       campaigns: state.campaigns.map((c) =>
         c.id === campaignId
@@ -432,7 +400,7 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
                           ? {
                               ...ad,
                               descriptions: ad.descriptions.map((d) =>
-                                d.id === descriptionId ? { ...d, text } : d
+                                d.id === descriptionId ? { ...d, ...updates } : d
                               ),
                               updatedAt: new Date().toISOString(),
                             }

@@ -14,16 +14,19 @@ export interface Description {
   pinnedPosition?: number;
 }
 
-// Keyword entity with match types
+// Keyword entity (simplified - match types controlled at ad group level)
 export interface Keyword {
   id: string;
   text: string;
-  matchTypes: {
-    broad: boolean;
-    phrase: boolean;
-    exact: boolean;
-  };
-  maxCpc?: number;
+  maxCpc?: number; // Optional override for this specific keyword
+}
+
+// Match type bid modifier (can be exact price or percentage)
+export interface MatchTypeBidModifier {
+  type: 'exact' | 'percentage';
+  broad: number;   // If type=exact: price in dollars, if type=percentage: -25 = -25%
+  phrase: number;  // If type=exact: price in dollars, if type=percentage: 0 = no change
+  exact: number;   // If type=exact: price in dollars, if type=percentage: +25 = +25%
 }
 
 // Responsive Search Ad entity
@@ -48,6 +51,7 @@ export interface AdGroup {
   name: string;
   status: 'active' | 'paused';
   maxCpc: number;
+  matchTypeBidding?: MatchTypeBidModifier; // Optional match type bid adjustments
   keywords: Keyword[];
   ads: ResponsiveSearchAd[];
   createdAt: string;

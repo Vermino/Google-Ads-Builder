@@ -35,12 +35,18 @@ export const mockCampaigns: Campaign[] = [
         name: 'Instagram Marketing Platform',
         status: 'active',
         maxCpc: 2.50,
+        matchTypeBidding: {
+          type: 'percentage',
+          broad: -20,    // 20% lower than maxCpc
+          phrase: 0,     // Same as maxCpc
+          exact: 15,     // 15% higher than maxCpc
+        },
         keywords: [
-          { id: 'kw-1-1', text: 'instagram marketing platform', matchTypes: { broad: true, phrase: true, exact: true } },
-          { id: 'kw-1-2', text: 'instagram growth tool', matchTypes: { broad: true, phrase: true, exact: false } },
-          { id: 'kw-1-3', text: 'instagram automation software', matchTypes: { broad: false, phrase: true, exact: true } },
-          { id: 'kw-1-4', text: 'social media growth service', matchTypes: { broad: true, phrase: false, exact: false } },
-          { id: 'kw-1-5', text: 'instagram engagement tool', matchTypes: { broad: true, phrase: true, exact: true } },
+          { id: 'kw-1-1', text: 'instagram marketing platform' },
+          { id: 'kw-1-2', text: 'instagram growth tool' },
+          { id: 'kw-1-3', text: 'instagram automation software' },
+          { id: 'kw-1-4', text: 'social media growth service' },
+          { id: 'kw-1-5', text: 'instagram engagement tool' },
         ],
         ads: [
           {
@@ -87,12 +93,18 @@ export const mockCampaigns: Campaign[] = [
         name: 'Instagram Account Manager',
         status: 'active',
         maxCpc: 2.75,
+        matchTypeBidding: {
+          type: 'exact',
+          broad: 2.00,    // Exact price for broad
+          phrase: 2.75,   // Exact price for phrase (same as maxCpc)
+          exact: 3.50,    // Exact price for exact match
+        },
         keywords: [
-          { id: 'kw-2-1', text: 'instagram account manager', matchTypes: { broad: true, phrase: true, exact: true } },
-          { id: 'kw-2-2', text: 'social media manager service', matchTypes: { broad: true, phrase: true, exact: false } },
-          { id: 'kw-2-3', text: 'instagram management service', matchTypes: { broad: false, phrase: true, exact: true } },
-          { id: 'kw-2-4', text: 'instagram marketing agency', matchTypes: { broad: true, phrase: false, exact: false } },
-          { id: 'kw-2-5', text: 'managed instagram service', matchTypes: { broad: true, phrase: true, exact: false } },
+          { id: 'kw-2-1', text: 'instagram account manager' },
+          { id: 'kw-2-2', text: 'social media manager service' },
+          { id: 'kw-2-3', text: 'instagram management service' },
+          { id: 'kw-2-4', text: 'instagram marketing agency' },
+          { id: 'kw-2-5', text: 'managed instagram service' },
         ],
         ads: [
           {
@@ -140,11 +152,11 @@ export const mockCampaigns: Campaign[] = [
         status: 'active',
         maxCpc: 2.25,
         keywords: [
-          { id: 'kw-3-1', text: 'instagram marketing course', matchTypes: { broad: true, phrase: true, exact: true } },
-          { id: 'kw-3-2', text: 'instagram training program', matchTypes: { broad: true, phrase: true, exact: false } },
-          { id: 'kw-3-3', text: 'learn instagram marketing', matchTypes: { broad: true, phrase: false, exact: false } },
-          { id: 'kw-3-4', text: 'instagram growth course', matchTypes: { broad: false, phrase: true, exact: true } },
-          { id: 'kw-3-5', text: 'social media marketing class', matchTypes: { broad: true, phrase: true, exact: false } },
+          { id: 'kw-3-1', text: 'instagram marketing course' },
+          { id: 'kw-3-2', text: 'instagram training program' },
+          { id: 'kw-3-3', text: 'learn instagram marketing' },
+          { id: 'kw-3-4', text: 'instagram growth course' },
+          { id: 'kw-3-5', text: 'social media marketing class' },
         ],
         ads: [
           {
@@ -192,11 +204,11 @@ export const mockCampaigns: Campaign[] = [
         status: 'active',
         maxCpc: 2.60,
         keywords: [
-          { id: 'kw-4-1', text: 'instagram growth service', matchTypes: { broad: true, phrase: true, exact: true } },
-          { id: 'kw-4-2', text: 'grow instagram followers', matchTypes: { broad: true, phrase: false, exact: false } },
-          { id: 'kw-4-3', text: 'instagram boost service', matchTypes: { broad: false, phrase: true, exact: false } },
-          { id: 'kw-4-4', text: 'increase instagram engagement', matchTypes: { broad: true, phrase: true, exact: false } },
-          { id: 'kw-4-5', text: 'instagram reach service', matchTypes: { broad: true, phrase: true, exact: true } },
+          { id: 'kw-4-1', text: 'instagram growth service' },
+          { id: 'kw-4-2', text: 'grow instagram followers' },
+          { id: 'kw-4-3', text: 'instagram boost service' },
+          { id: 'kw-4-4', text: 'increase instagram engagement' },
+          { id: 'kw-4-5', text: 'instagram reach service' },
         ],
         ads: [
           {
@@ -243,12 +255,18 @@ export const mockCampaigns: Campaign[] = [
         name: 'Instagram Automation Tools',
         status: 'active',
         maxCpc: 2.40,
+        matchTypeBidding: {
+          type: 'percentage',
+          broad: -15,
+          phrase: 0,
+          exact: 10,
+        },
         keywords: [
-          { id: 'kw-5-1', text: 'instagram automation tool', matchTypes: { broad: true, phrase: true, exact: true } },
-          { id: 'kw-5-2', text: 'instagram scheduler', matchTypes: { broad: true, phrase: false, exact: false } },
-          { id: 'kw-5-3', text: 'instagram posting automation', matchTypes: { broad: false, phrase: true, exact: false } },
-          { id: 'kw-5-4', text: 'instagram management software', matchTypes: { broad: true, phrase: true, exact: true } },
-          { id: 'kw-5-5', text: 'automate instagram posts', matchTypes: { broad: true, phrase: true, exact: false } },
+          { id: 'kw-5-1', text: 'instagram automation tool' },
+          { id: 'kw-5-2', text: 'instagram scheduler' },
+          { id: 'kw-5-3', text: 'instagram posting automation' },
+          { id: 'kw-5-4', text: 'instagram management software' },
+          { id: 'kw-5-5', text: 'automate instagram posts' },
         ],
         ads: [
           {

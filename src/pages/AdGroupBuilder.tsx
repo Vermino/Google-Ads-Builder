@@ -36,11 +36,6 @@ const AdGroupBuilder = () => {
     const newKeyword: Keyword = {
       id: `kw-${Date.now()}`,
       text: '',
-      matchTypes: {
-        broad: true,
-        phrase: false,
-        exact: false,
-      },
     };
     addKeyword(campaignId!, adGroupId!, newKeyword);
   };
