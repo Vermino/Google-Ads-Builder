@@ -1,13 +1,14 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useCampaignStore } from '@/stores/useCampaignStore';
 import CampaignList from '@/components/campaigns/CampaignList';
 
 const Dashboard: React.FC = () => {
   const campaigns = useCampaignStore((state) => state.campaigns);
+  const navigate = useNavigate();
 
   const handleCampaignClick = (campaignId: string) => {
-    console.log('Navigate to campaign builder:', campaignId);
-    // React Router will be added in Ticket #9
+    navigate(`/campaigns/${campaignId}`);
   };
 
   const handleNewCampaign = () => {

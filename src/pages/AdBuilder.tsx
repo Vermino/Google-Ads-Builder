@@ -1,4 +1,5 @@
 import React from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useCampaignStore } from '@/stores/useCampaignStore';
 import HeadlineInput from '@/components/ads/HeadlineInput';
 import DescriptionInput from '@/components/ads/DescriptionInput';
@@ -7,13 +8,11 @@ import CharacterCounter from '@/components/common/CharacterCounter';
 import { CHAR_LIMITS, MAX_COUNTS } from '@/utils/constants';
 import type { Headline, Description } from '@/types';
 
-// For now, hardcode to first campaign, first ad group, and first ad until routing is added
-const DEMO_CAMPAIGN_ID = '1';
-const DEMO_ADGROUP_ID = 'ag1';
-const DEMO_AD_ID = 'ad1';
-
 const AdBuilder: React.FC = () => {
-  const ad = useCampaignStore((state) => state.getAd(DEMO_CAMPAIGN_ID, DEMO_ADGROUP_ID, DEMO_AD_ID));
+  const { campaignId, adGroupId, adId } = useParams<{ campaignId: string; adGroupId: string; adId: string }>();
+  const navigate = useNavigate();
+
+  const ad = useCampaignStore((state) => state.getAd(campaignId!, adGroupId!, adId!));
   const updateAd = useCampaignStore((state) => state.updateAd);
   const addHeadline = useCampaignStore((state) => state.addHeadline);
   const updateHeadline = useCampaignStore((state) => state.updateHeadline);
@@ -28,6 +27,12 @@ const AdBuilder: React.FC = () => {
         <div className="text-center">
           <h2 className="text-xl font-semibold text-gray-900 mb-2">Ad not found</h2>
           <p className="text-gray-600">The ad you're looking for doesn't exist.</p>
+          <button
+            onClick={() => navigate(`/campaigns/${campaignId}/ad-groups/${adGroupId}`)}
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            Back to Ad Group
+          </button>
         </div>
       </div>
     );
@@ -43,7 +48,7 @@ const AdBuilder: React.FC = () => {
       id: `h-${Date.now()}`,
       text: '',
     };
-    addHeadline(DEMO_CAMPAIGN_ID, DEMO_ADGROUP_ID, DEMO_AD_ID, newHeadline);
+    addHeadline(campaignId!, adGroupId!, adId!, newHeadline);
   };
 
   const handleAddDescription = () => {
@@ -56,7 +61,7 @@ const AdBuilder: React.FC = () => {
       id: `d-${Date.now()}`,
       text: '',
     };
-    addDescription(DEMO_CAMPAIGN_ID, DEMO_ADGROUP_ID, DEMO_AD_ID, newDescription);
+    addDescription(campaignId!, adGroupId!, adId!, newDescription);
   };
 
   return (
@@ -67,7 +72,7 @@ const AdBuilder: React.FC = () => {
           <div className="flex justify-between items-center">
             <div className="flex items-center space-x-4">
               <button
-                onClick={() => console.log('Navigate back to ad group builder')}
+                onClick={() => navigate(`/campaigns/${campaignId}/ad-groups/${adGroupId}`)}
                 className="text-gray-500 hover:text-gray-700"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -110,7 +115,7 @@ const AdBuilder: React.FC = () => {
                     type="url"
                     value={ad.finalUrl}
                     onChange={(e) =>
-                      updateAd(DEMO_CAMPAIGN_ID, DEMO_ADGROUP_ID, DEMO_AD_ID, { finalUrl: e.target.value })
+                      updateAd(campaignId!, adGroupId!, adId!, { finalUrl: e.target.value })
                     }
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
@@ -126,7 +131,7 @@ const AdBuilder: React.FC = () => {
                       type="text"
                       value={ad.path1 || ''}
                       onChange={(e) =>
-                        updateAd(DEMO_CAMPAIGN_ID, DEMO_ADGROUP_ID, DEMO_AD_ID, { path1: e.target.value })
+                        updateAd(campaignId!, adGroupId!, adId!, { path1: e.target.value })
                       }
                       maxLength={CHAR_LIMITS.PATH}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -141,7 +146,7 @@ const AdBuilder: React.FC = () => {
                       type="text"
                       value={ad.path2 || ''}
                       onChange={(e) =>
-                        updateAd(DEMO_CAMPAIGN_ID, DEMO_ADGROUP_ID, DEMO_AD_ID, { path2: e.target.value })
+                        updateAd(campaignId!, adGroupId!, adId!, { path2: e.target.value })
                       }
                       maxLength={CHAR_LIMITS.PATH}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -176,9 +181,9 @@ const AdBuilder: React.FC = () => {
                     headline={headline}
                     index={index}
                     onUpdate={(text) =>
-                      updateHeadline(DEMO_CAMPAIGN_ID, DEMO_ADGROUP_ID, DEMO_AD_ID, headline.id, text)
+                      updateHeadline(campaignId!, adGroupId!, adId!, headline.id, text)
                     }
-                    onDelete={() => deleteHeadline(DEMO_CAMPAIGN_ID, DEMO_ADGROUP_ID, DEMO_AD_ID, headline.id)}
+                    onDelete={() => deleteHeadline(campaignId!, adGroupId!, adId!, headline.id)}
                   />
                 ))}
               </div>
@@ -209,10 +214,10 @@ const AdBuilder: React.FC = () => {
                     description={description}
                     index={index}
                     onUpdate={(text) =>
-                      updateDescription(DEMO_CAMPAIGN_ID, DEMO_ADGROUP_ID, DEMO_AD_ID, description.id, text)
+                      updateDescription(campaignId!, adGroupId!, adId!, description.id, text)
                     }
                     onDelete={() =>
-                      deleteDescription(DEMO_CAMPAIGN_ID, DEMO_ADGROUP_ID, DEMO_AD_ID, description.id)
+                      deleteDescription(campaignId!, adGroupId!, adId!, description.id)
                     }
                   />
                 ))}

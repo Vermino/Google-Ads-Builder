@@ -1,16 +1,16 @@
 import React from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useCampaignStore } from '@/stores/useCampaignStore';
 import AdGroupSettings from '@/components/adgroups/AdGroupSettings';
 import KeywordManager from '@/components/adgroups/KeywordManager';
 import AdList from '@/components/ads/AdList';
 import type { Keyword } from '@/types';
 
-// For now, hardcode to first campaign and first ad group until routing is added
-const DEMO_CAMPAIGN_ID = '1';
-const DEMO_ADGROUP_ID = 'ag1';
-
 const AdGroupBuilder: React.FC = () => {
-  const adGroup = useCampaignStore((state) => state.getAdGroup(DEMO_CAMPAIGN_ID, DEMO_ADGROUP_ID));
+  const { campaignId, adGroupId } = useParams<{ campaignId: string; adGroupId: string }>();
+  const navigate = useNavigate();
+
+  const adGroup = useCampaignStore((state) => state.getAdGroup(campaignId!, adGroupId!));
   const updateAdGroup = useCampaignStore((state) => state.updateAdGroup);
   const addKeyword = useCampaignStore((state) => state.addKeyword);
   const updateKeyword = useCampaignStore((state) => state.updateKeyword);
@@ -22,6 +22,12 @@ const AdGroupBuilder: React.FC = () => {
         <div className="text-center">
           <h2 className="text-xl font-semibold text-gray-900 mb-2">Ad Group not found</h2>
           <p className="text-gray-600">The ad group you're looking for doesn't exist.</p>
+          <button
+            onClick={() => navigate(`/campaigns/${campaignId}`)}
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            Back to Campaign
+          </button>
         </div>
       </div>
     );
@@ -37,12 +43,11 @@ const AdGroupBuilder: React.FC = () => {
         exact: false,
       },
     };
-    addKeyword(DEMO_CAMPAIGN_ID, DEMO_ADGROUP_ID, newKeyword);
+    addKeyword(campaignId!, adGroupId!, newKeyword);
   };
 
   const handleAdClick = (adId: string) => {
-    console.log('Navigate to ad builder:', adId);
-    // React Router will be added in Ticket #9
+    navigate(`/campaigns/${campaignId}/ad-groups/${adGroupId}/ads/${adId}`);
   };
 
   return (
@@ -53,7 +58,7 @@ const AdGroupBuilder: React.FC = () => {
           <div className="flex justify-between items-center">
             <div className="flex items-center space-x-4">
               <button
-                onClick={() => console.log('Navigate back to campaign builder')}
+                onClick={() => navigate(`/campaigns/${campaignId}`)}
                 className="text-gray-500 hover:text-gray-700"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -81,17 +86,17 @@ const AdGroupBuilder: React.FC = () => {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <AdGroupSettings
           adGroup={adGroup}
-          onUpdate={(updates) => updateAdGroup(DEMO_CAMPAIGN_ID, DEMO_ADGROUP_ID, updates)}
+          onUpdate={(updates) => updateAdGroup(campaignId!, adGroupId!, updates)}
         />
 
         <KeywordManager
           keywords={adGroup.keywords}
           onAddKeyword={handleAddKeyword}
           onUpdateKeyword={(keywordId, updates) =>
-            updateKeyword(DEMO_CAMPAIGN_ID, DEMO_ADGROUP_ID, keywordId, updates)
+            updateKeyword(campaignId!, adGroupId!, keywordId, updates)
           }
           onDeleteKeyword={(keywordId) =>
-            deleteKeyword(DEMO_CAMPAIGN_ID, DEMO_ADGROUP_ID, keywordId)
+            deleteKeyword(campaignId!, adGroupId!, keywordId)
           }
         />
 

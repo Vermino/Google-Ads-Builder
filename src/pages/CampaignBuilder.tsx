@@ -1,14 +1,15 @@
 import React from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useCampaignStore } from '@/stores/useCampaignStore';
 import CampaignSettings from '@/components/campaigns/CampaignSettings';
 import GlobalDescriptions from '@/components/campaigns/GlobalDescriptions';
 import AdGroupList from '@/components/adgroups/AdGroupList';
 
-// For now, hardcode to first campaign until routing is added
-const DEMO_CAMPAIGN_ID = '1';
-
 const CampaignBuilder: React.FC = () => {
-  const campaign = useCampaignStore((state) => state.getCampaign(DEMO_CAMPAIGN_ID));
+  const { campaignId } = useParams<{ campaignId: string }>();
+  const navigate = useNavigate();
+
+  const campaign = useCampaignStore((state) => state.getCampaign(campaignId!));
   const updateCampaign = useCampaignStore((state) => state.updateCampaign);
   const updateGlobalDescription = useCampaignStore((state) => state.updateGlobalDescription);
 
@@ -18,14 +19,19 @@ const CampaignBuilder: React.FC = () => {
         <div className="text-center">
           <h2 className="text-xl font-semibold text-gray-900 mb-2">Campaign not found</h2>
           <p className="text-gray-600">The campaign you're looking for doesn't exist.</p>
+          <button
+            onClick={() => navigate('/')}
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            Back to Dashboard
+          </button>
         </div>
       </div>
     );
   }
 
   const handleAdGroupClick = (adGroupId: string) => {
-    console.log('Navigate to ad group builder:', adGroupId);
-    // React Router will be added in Ticket #9
+    navigate(`/campaigns/${campaignId}/ad-groups/${adGroupId}`);
   };
 
   return (
@@ -36,7 +42,7 @@ const CampaignBuilder: React.FC = () => {
           <div className="flex justify-between items-center">
             <div className="flex items-center space-x-4">
               <button
-                onClick={() => console.log('Navigate back to dashboard')}
+                onClick={() => navigate('/')}
                 className="text-gray-500 hover:text-gray-700"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -64,13 +70,13 @@ const CampaignBuilder: React.FC = () => {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <CampaignSettings
           campaign={campaign}
-          onUpdate={(updates) => updateCampaign(DEMO_CAMPAIGN_ID, updates)}
+          onUpdate={(updates) => updateCampaign(campaignId!, updates)}
         />
 
         <GlobalDescriptions
           campaign={campaign}
-          onUpdateDescription={(descId, updates) => updateGlobalDescription(DEMO_CAMPAIGN_ID, descId, updates)}
-          onUpdateCampaign={(updates) => updateCampaign(DEMO_CAMPAIGN_ID, updates)}
+          onUpdateDescription={(descId, updates) => updateGlobalDescription(campaignId!, descId, updates)}
+          onUpdateCampaign={(updates) => updateCampaign(campaignId!, updates)}
         />
 
         <AdGroupList adGroups={campaign.adGroups} onAdGroupClick={handleAdGroupClick} />
