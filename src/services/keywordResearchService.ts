@@ -2,10 +2,13 @@
  * Keyword Research Service for Google Ads Campaign Builder
  *
  * Provides AI-powered keyword research, expansion, and analysis capabilities
- * for Google Ads campaigns without requiring external API access.
+ * for Google Ads campaigns via backend API.
+ *
+ * NOTE: This service now uses the backend API instead of direct OpenAI/Claude calls.
+ * API keys are stored securely on the server.
  *
  * Features:
- * - AI-powered keyword suggestions using existing OpenAI/Claude integration
+ * - AI-powered keyword suggestions via backend API
  * - Keyword expansion with modifiers (prefixes, suffixes, intents)
  * - Long-tail keyword variation generation
  * - Negative keyword suggestions
@@ -15,11 +18,9 @@
  * @module keywordResearchService
  */
 
+import { apiClient, isAPIConfigured } from './apiClient';
 import { AIServiceError } from './aiService';
 import type { AIProvider } from './aiService';
-import { AI_CONFIG, isProviderConfigured } from '@/config/aiConfig';
-import OpenAI from 'openai';
-import Anthropic from '@anthropic-ai/sdk';
 
 /* ==================== TYPE DEFINITIONS ==================== */
 
@@ -145,7 +146,7 @@ export class KeywordResearchError extends Error {
   }
 }
 
-/* ==================== KEYWORD MODIFIERS ==================== */
+/* ==================== KEYWORD MODIFIERS (Client-side helpers) ==================== */
 
 /**
  * Prefix modifiers to create keyword variations
@@ -228,268 +229,7 @@ const QUESTION_MODIFIERS = [
   'best way to',
 ];
 
-/* ==================== AI PROMPT TEMPLATES ==================== */
-
-/**
- * Build AI prompt for keyword generation
- */
-function buildKeywordGenerationPrompt(request: KeywordResearchRequest): string {
-  const {
-    seedKeywords,
-    businessDescription = '',
-    targetLocation = '',
-    maxResults = 100,
-  } = request;
-
-  const seedKeywordList = seedKeywords.join(', ');
-  const locationContext = targetLocation ? `\nTarget Location: ${targetLocation}` : '';
-
-  return `Generate relevant keywords for a Google Ads campaign.
-
-Business: ${businessDescription}
-Seed Keywords: ${seedKeywordList}${locationContext}
-
-Generate ${Math.min(maxResults, 100)} highly relevant keywords that potential customers might use to search for this business. Include:
-
-1. PRODUCT/SERVICE KEYWORDS:
-   - Exact product/service names
-   - Product categories
-   - Service types
-   - Branded terms (if applicable)
-
-2. PROBLEM-SOLVING KEYWORDS:
-   - "how to..." searches
-   - "best way to..." searches
-   - Problem statements customers might search
-
-3. COMMERCIAL INTENT KEYWORDS:
-   - "buy [product]"
-   - "hire [service]"
-   - "order [product]"
-   - "[service] near me"
-   - "compare [product/service]"
-
-4. LONG-TAIL KEYWORDS (3-5 words):
-   - Specific, detailed searches
-   - Location-based if location provided
-   - Year/season specific where relevant
-
-5. COMPARISON KEYWORDS:
-   - "[product] vs [alternative]"
-   - "best [product/service]"
-   - "[product/service] reviews"
-
-REQUIREMENTS:
-- Each keyword should be realistic and commonly searched
-- Include a mix of short (1-2 words) and long-tail (3-5 words) keywords
-- Focus on commercial intent keywords (users ready to buy/hire)
-- Make keywords specific to the business description
-- Include location-based variations if location is provided
-- Output ONLY the keywords, one per line
-- NO numbering, bullets, or explanations
-- NO duplicate keywords
-
-Keywords:`;
-}
-
-/* ==================== AI CLIENT INITIALIZATION ==================== */
-
-let openaiClient: OpenAI | null = null;
-let claudeClient: Anthropic | null = null;
-
-/**
- * Initialize OpenAI client
- */
-function getOpenAIClient(): OpenAI {
-  if (!openaiClient && AI_CONFIG.openai.apiKey) {
-    openaiClient = new OpenAI({
-      apiKey: AI_CONFIG.openai.apiKey,
-      dangerouslyAllowBrowser: true,
-    });
-  }
-
-  if (!openaiClient) {
-    throw new KeywordResearchError(
-      'PROVIDER_NOT_CONFIGURED',
-      'OpenAI API key is not configured'
-    );
-  }
-
-  return openaiClient;
-}
-
-/**
- * Initialize Claude client
- */
-function getClaudeClient(): Anthropic {
-  if (!claudeClient && AI_CONFIG.claude.apiKey) {
-    claudeClient = new Anthropic({
-      apiKey: AI_CONFIG.claude.apiKey,
-      dangerouslyAllowBrowser: true,
-    });
-  }
-
-  if (!claudeClient) {
-    throw new KeywordResearchError(
-      'PROVIDER_NOT_CONFIGURED',
-      'Claude API key is not configured'
-    );
-  }
-
-  return claudeClient;
-}
-
-/* ==================== AI KEYWORD GENERATION ==================== */
-
-/**
- * Call OpenAI API for keyword generation
- */
-async function callOpenAIForKeywords(prompt: string): Promise<string> {
-  const client = getOpenAIClient();
-
-  try {
-    const response = await Promise.race([
-      client.chat.completions.create({
-        model: AI_CONFIG.openai.model,
-        messages: [{ role: 'user', content: prompt }],
-        max_tokens: AI_CONFIG.openai.maxTokens,
-        temperature: AI_CONFIG.openai.temperature,
-      }),
-      new Promise<never>((_, reject) =>
-        setTimeout(
-          () => reject(new Error('Request timeout')),
-          AI_CONFIG.generation.timeoutMs
-        )
-      ),
-    ]);
-
-    return response.choices[0]?.message?.content || '';
-  } catch (error: any) {
-    if (error.message === 'Request timeout') {
-      throw new AIServiceError('TIMEOUT', 'OpenAI request timed out', error);
-    }
-
-    if (error.status === 401) {
-      throw new AIServiceError('AUTH_ERROR', 'Invalid OpenAI API key', error);
-    } else if (error.status === 429) {
-      throw new AIServiceError('RATE_LIMIT', 'OpenAI rate limit exceeded', error);
-    } else if (error.status === 500 || error.status === 503) {
-      throw new AIServiceError('API_ERROR', 'OpenAI service error', error);
-    } else {
-      throw new AIServiceError('UNKNOWN_ERROR', 'OpenAI error occurred', error);
-    }
-  }
-}
-
-/**
- * Call Claude API for keyword generation
- */
-async function callClaudeForKeywords(prompt: string): Promise<string> {
-  const client = getClaudeClient();
-
-  try {
-    const response = await Promise.race([
-      client.messages.create({
-        model: AI_CONFIG.claude.model,
-        max_tokens: AI_CONFIG.claude.maxTokens,
-        messages: [{ role: 'user', content: prompt }],
-      }),
-      new Promise<never>((_, reject) =>
-        setTimeout(
-          () => reject(new Error('Request timeout')),
-          AI_CONFIG.generation.timeoutMs
-        )
-      ),
-    ]);
-
-    const textContent = response.content.find((block) => block.type === 'text');
-    return textContent && 'text' in textContent ? textContent.text : '';
-  } catch (error: any) {
-    if (error.message === 'Request timeout') {
-      throw new AIServiceError('TIMEOUT', 'Claude request timed out', error);
-    }
-
-    if (error.status === 401) {
-      throw new AIServiceError('AUTH_ERROR', 'Invalid Claude API key', error);
-    } else if (error.status === 429) {
-      throw new AIServiceError('RATE_LIMIT', 'Claude rate limit exceeded', error);
-    } else if (error.status === 500 || error.status === 503) {
-      throw new AIServiceError('API_ERROR', 'Claude service error', error);
-    } else {
-      throw new AIServiceError('UNKNOWN_ERROR', 'Claude error occurred', error);
-    }
-  }
-}
-
-/**
- * Generate keyword suggestions using AI
- *
- * @param request - Keyword research request parameters
- * @returns Array of AI-generated keyword suggestions
- *
- * @example
- * ```typescript
- * const aiKeywords = await generateAIKeywords({
- *   provider: 'openai',
- *   seedKeywords: ['plumbing', 'emergency plumber'],
- *   businessDescription: 'Local emergency plumbing service',
- *   targetLocation: 'New York',
- * });
- * ```
- */
-async function generateAIKeywords(
-  request: KeywordResearchRequest
-): Promise<string[]> {
-  // Validate provider is configured
-  if (!isProviderConfigured(request.provider)) {
-    throw new KeywordResearchError(
-      'PROVIDER_NOT_CONFIGURED',
-      `${request.provider} is not configured. Please add API key to .env.local`
-    );
-  }
-
-  // Build prompt
-  const prompt = buildKeywordGenerationPrompt(request);
-
-  // Call AI service based on provider
-  let response: string;
-  if (request.provider === 'openai') {
-    response = await callOpenAIForKeywords(prompt);
-  } else {
-    response = await callClaudeForKeywords(prompt);
-  }
-
-  // Parse response - extract keywords line by line
-  const keywords = response
-    .split('\n')
-    .map((line) => line.trim())
-    .filter((line) => {
-      // Remove empty lines and lines that look like headers/instructions
-      if (!line) return false;
-      if (line.toLowerCase().startsWith('keyword')) return false;
-      if (line.match(/^\d+\./)) return false; // Remove numbered lines
-      if (line.startsWith('-')) return false; // Remove bullet points
-      if (line.endsWith(':')) return false; // Remove headers
-      return true;
-    })
-    .map((line) => {
-      // Clean up the keyword
-      line = line.replace(/^\d+\.\s*/, ''); // Remove numbering
-      line = line.replace(/^[-*]\s*/, ''); // Remove bullets
-      line = line.replace(/^["']|["']$/g, ''); // Remove quotes
-      return line.trim().toLowerCase();
-    })
-    .filter((keyword) => {
-      // Validate keyword
-      if (keyword.length === 0) return false;
-      if (keyword.length > 80) return false; // Google Ads max keyword length
-      return true;
-    });
-
-  return keywords;
-}
-
-/* ==================== KEYWORD EXPANSION ==================== */
+/* ==================== KEYWORD EXPANSION (Local fallback) ==================== */
 
 /**
  * Expand seed keywords with modifiers to create variations
@@ -975,15 +715,10 @@ function categorizeKeyword(keyword: string): string {
 /* ==================== MAIN RESEARCH FUNCTION ==================== */
 
 /**
- * Perform comprehensive keyword research
+ * Perform comprehensive keyword research via backend API
  *
- * This is the main entry point for keyword research. It combines:
- * 1. AI-generated keyword suggestions
- * 2. Keyword expansion with modifiers
- * 3. Long-tail variation generation
- * 4. Negative keyword suggestions
- * 5. Relevance scoring and filtering
- * 6. Match type recommendations
+ * This is the main entry point for keyword research. It uses the backend API
+ * for AI-powered keyword generation and combines it with local expansion.
  *
  * @param request - Keyword research request parameters
  * @returns Complete keyword research results
@@ -1019,6 +754,14 @@ export async function researchKeywords(
       );
     }
 
+    // Check if API is configured
+    if (!isAPIConfigured()) {
+      throw new KeywordResearchError(
+        'AI_ERROR',
+        'API not configured. Please check your environment variables (.env.local).'
+      );
+    }
+
     const {
       seedKeywords,
       businessDescription = '',
@@ -1028,19 +771,38 @@ export async function researchKeywords(
       includeNegativeKeywords = true,
     } = request;
 
-    // 1. Generate AI-powered keyword suggestions
-    let aiKeywords: string[] = [];
+    // 1. Call backend API for AI-powered keyword research
+    let apiKeywords: string[] = [];
+    let apiRelatedTerms: string[] = [];
+    let apiLongTailVariations: string[] = [];
+    let apiNegativeKeywords: string[] = [];
+
     try {
-      aiKeywords = await generateAIKeywords(request);
+      const response = await apiClient.researchKeywords({
+        provider: request.provider,
+        seedKeywords,
+        businessDescription,
+        targetLocation,
+        language: request.language,
+        maxResults,
+        includeLongTail,
+        includeNegativeKeywords,
+      });
+
+      // Extract API results
+      apiKeywords = response.suggestions?.map(s => s.keyword) || [];
+      apiRelatedTerms = response.relatedTerms || [];
+      apiLongTailVariations = response.longTailVariations || [];
+      apiNegativeKeywords = response.negativeKeywords || [];
     } catch (error) {
-      // If AI fails, continue with expansion only
-      console.warn('AI keyword generation failed, using expansion only:', error);
+      // If API fails, continue with local expansion only
+      console.warn('API keyword research failed, using local expansion only:', error);
     }
 
-    // 2. Expand seed keywords with modifiers
+    // 2. Expand seed keywords locally (as fallback/supplement)
     const expandedKeywords = expandKeywords(seedKeywords, 20);
 
-    // 3. Generate long-tail variations
+    // 3. Generate long-tail variations locally
     const longTailKeywords: string[] = [];
     if (includeLongTail) {
       for (const keyword of seedKeywords) {
@@ -1050,7 +812,7 @@ export async function researchKeywords(
 
     // 4. Combine all keyword sources and deduplicate
     const allKeywords = [
-      ...aiKeywords,
+      ...apiKeywords,
       ...expandedKeywords,
       ...longTailKeywords,
       ...seedKeywords,
@@ -1080,20 +842,29 @@ export async function researchKeywords(
       .slice(0, maxResults); // Limit results
 
     // 6. Generate related terms (top 20 keywords)
-    const relatedTerms = scoredKeywords
-      .filter((k) => !k.isLongTail)
-      .slice(0, 20)
-      .map((k) => k.keyword);
+    const relatedTerms = Array.from(new Set([
+      ...apiRelatedTerms,
+      ...scoredKeywords
+        .filter((k) => !k.isLongTail)
+        .slice(0, 20)
+        .map((k) => k.keyword)
+    ])).slice(0, 20);
 
     // 7. Extract long-tail variations
-    const longTailVariations = scoredKeywords
-      .filter((k) => k.isLongTail)
-      .slice(0, 50)
-      .map((k) => k.keyword);
+    const longTailVariations = Array.from(new Set([
+      ...apiLongTailVariations,
+      ...scoredKeywords
+        .filter((k) => k.isLongTail)
+        .slice(0, 50)
+        .map((k) => k.keyword)
+    ])).slice(0, 50);
 
     // 8. Generate negative keywords
     const negativeKeywords = includeNegativeKeywords
-      ? suggestNegativeKeywords(seedKeywords)
+      ? Array.from(new Set([
+          ...apiNegativeKeywords,
+          ...suggestNegativeKeywords(seedKeywords)
+        ]))
       : [];
 
     // 9. Validate results
@@ -1152,7 +923,7 @@ export function formatKeywordResearchError(error: unknown): string {
       case 'NO_RESULTS':
         return 'No relevant keywords found. Try different seed keywords or business description.';
       case 'PROVIDER_NOT_CONFIGURED':
-        return 'AI provider is not configured. Please add your API key in settings.';
+        return 'AI provider is not configured on the server.';
       default:
         return 'Keyword research failed. Please try again.';
     }

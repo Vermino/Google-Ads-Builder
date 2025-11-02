@@ -1,56 +1,19 @@
 /**
  * AI Service Configuration
  *
- * Configuration for OpenAI and Claude API integrations.
- * Manages API keys, model settings, and generation parameters.
+ * NOTE: This configuration is now primarily for reference and validation constants.
+ * API keys are NO LONGER stored in the frontend. All AI requests now go through
+ * the secure backend API server.
+ *
+ * The backend API configuration is in .env.local:
+ * - VITE_API_URL: Backend server URL
+ * - VITE_API_TOKEN: Authentication token for backend API
  */
 
 /**
- * Get API key from environment or localStorage
+ * AI Configuration (for reference and constants only)
  */
-function getApiKey(envKey: string, storageKey: string): string {
-  // Try environment variable first
-  const envValue = import.meta.env[envKey];
-  if (envValue) return envValue;
-
-  // Fall back to localStorage
-  try {
-    const stored = localStorage.getItem(storageKey);
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      return parsed || '';
-    }
-  } catch (error) {
-    console.warn(`Failed to read ${storageKey} from localStorage:`, error);
-  }
-
-  return '';
-}
-
 export const AI_CONFIG = {
-  /**
-   * OpenAI Configuration
-   */
-  openai: {
-    get apiKey() {
-      return getApiKey('VITE_OPENAI_API_KEY', 'ai_openai_key');
-    },
-    model: 'gpt-4-turbo-preview',
-    maxTokens: 500,
-    temperature: 0.7,
-  },
-
-  /**
-   * Claude (Anthropic) Configuration
-   */
-  claude: {
-    get apiKey() {
-      return getApiKey('VITE_CLAUDE_API_KEY', 'ai_claude_key');
-    },
-    model: 'claude-3-5-sonnet-20241022',
-    maxTokens: 500,
-  },
-
   /**
    * Ad Copy Generation Settings
    */
@@ -106,42 +69,29 @@ export const AI_CONFIG = {
 } as const;
 
 /**
- * Validate AI configuration
- * @returns true if configuration is valid
+ * @deprecated API keys are no longer stored in the frontend
+ * Use the backend API via apiClient instead
  */
 export function validateAIConfig(): {
   isValid: boolean;
   errors: string[];
 } {
-  const errors: string[] = [];
-
-  if (!AI_CONFIG.openai.apiKey && !AI_CONFIG.claude.apiKey) {
-    errors.push('At least one AI provider API key must be configured');
-  }
-
-  if (AI_CONFIG.openai.apiKey && !AI_CONFIG.openai.apiKey.startsWith('sk-')) {
-    errors.push('OpenAI API key appears to be invalid');
-  }
-
-  if (AI_CONFIG.claude.apiKey && !AI_CONFIG.claude.apiKey.startsWith('sk-ant-')) {
-    errors.push('Claude API key appears to be invalid');
-  }
-
+  console.warn(
+    'validateAIConfig is deprecated. Frontend no longer stores API keys. Use backend API instead.'
+  );
   return {
-    isValid: errors.length === 0,
-    errors,
+    isValid: true,
+    errors: [],
   };
 }
 
 /**
- * Check if a specific provider is configured
- * @param provider - The AI provider to check
- * @returns true if the provider is configured with a valid API key
+ * @deprecated API providers are now configured on the backend
+ * Use apiClient.getProviders() to check available providers
  */
-export function isProviderConfigured(provider: 'openai' | 'claude'): boolean {
-  if (provider === 'openai') {
-    return !!AI_CONFIG.openai.apiKey && AI_CONFIG.openai.apiKey.startsWith('sk-');
-  } else {
-    return !!AI_CONFIG.claude.apiKey && AI_CONFIG.claude.apiKey.startsWith('sk-ant-');
-  }
+export function isProviderConfigured(_provider: 'openai' | 'claude'): boolean {
+  console.warn(
+    'isProviderConfigured is deprecated. Check providers via backend API using apiClient.getProviders()'
+  );
+  return false;
 }

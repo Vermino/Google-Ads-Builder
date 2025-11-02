@@ -13,8 +13,6 @@ import {
   regenerateHeadlines,
   regenerateDescriptions,
   formatAIError,
-  isAIServiceAvailable,
-  getAvailableProviders,
   type GenerateAdCopyRequest,
   type GeneratedAdCopy,
   type AIProvider,
@@ -135,9 +133,9 @@ export function useAIGeneration(): UseAIGenerationReturn {
   const [generatedCopy, setGeneratedCopy] = useState<GeneratedAdCopy | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Check available providers (static values)
-  const isAvailable = isAIServiceAvailable();
-  const availableProviders = getAvailableProviders();
+  // Check available providers (will be populated async from backend)
+  const isAvailable = false; // Placeholder - backend will check
+  const availableProviders: AIProvider[] = []; // Placeholder - backend will provide
 
   /**
    * Generate complete ad copy

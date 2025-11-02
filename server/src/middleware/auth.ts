@@ -17,7 +17,7 @@ import { APIErrorClass } from './errorHandler.js';
  */
 export function authenticateToken(
   req: Request,
-  res: Response,
+  _res: Response,
   next: NextFunction
 ): void {
   // Extract Authorization header
