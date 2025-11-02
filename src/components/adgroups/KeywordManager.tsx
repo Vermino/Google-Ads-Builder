@@ -1,12 +1,14 @@
 import React from 'react';
 import type { Keyword } from '@/types';
 import KeywordRow from './KeywordRow';
+import KeywordResearchButton from '@/components/keywords/KeywordResearchButton';
 
 export interface KeywordManagerProps {
   keywords: Keyword[];
   onAddKeyword: () => void;
   onUpdateKeyword: (keywordId: string, updates: Partial<Keyword>) => void;
   onDeleteKeyword: (keywordId: string) => void;
+  onResearchKeywords?: () => void;
 }
 
 const KeywordManager: React.FC<KeywordManagerProps> = ({
@@ -14,6 +16,7 @@ const KeywordManager: React.FC<KeywordManagerProps> = ({
   onAddKeyword,
   onUpdateKeyword,
   onDeleteKeyword,
+  onResearchKeywords,
 }) => {
   return (
     <section className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
@@ -29,15 +32,20 @@ const KeywordManager: React.FC<KeywordManagerProps> = ({
           </svg>
           <h2 className="text-lg font-semibold text-gray-900">Keywords ({keywords.length})</h2>
         </div>
-        <button
-          onClick={onAddKeyword}
-          className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center space-x-1 transition-colors"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          <span>Add Keyword</span>
-        </button>
+        <div className="flex items-center space-x-2">
+          {onResearchKeywords && (
+            <KeywordResearchButton onClick={onResearchKeywords} />
+          )}
+          <button
+            onClick={onAddKeyword}
+            className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center space-x-1 transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            <span>Add Keyword</span>
+          </button>
+        </div>
       </div>
 
       {keywords.length === 0 ? (

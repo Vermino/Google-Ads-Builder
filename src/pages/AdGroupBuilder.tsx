@@ -6,15 +6,18 @@ import MatchTypeBidding from '@/components/adgroups/MatchTypeBidding';
 import KeywordManager from '@/components/adgroups/KeywordManager';
 import AdList from '@/components/ads/AdList';
 import NewAdModal from '@/components/modals/NewAdModal';
+import KeywordResearchModal from '@/components/modals/KeywordResearchModal';
 import BulkActionToolbar from '@/components/common/BulkActionToolbar';
 import { BulkDeleteConfirmModal, BulkChangeStatusModal } from '@/components/modals';
 import { useToast } from '@/hooks/useToast';
 import type { Keyword, ResponsiveSearchAd } from '@/types';
+import type { MatchTypeSettings } from '@/services/keywordResearchService';
 
 const AdGroupBuilder = () => {
   const { campaignId, adGroupId } = useParams<{ campaignId: string; adGroupId: string }>();
   const navigate = useNavigate();
   const [isNewAdModalOpen, setIsNewAdModalOpen] = useState(false);
+  const [isKeywordResearchModalOpen, setIsKeywordResearchModalOpen] = useState(false);
 
   // Bulk selection state
   const [selectedAdIds, setSelectedAdIds] = useState<string[]>([]);
@@ -24,6 +27,7 @@ const AdGroupBuilder = () => {
   const adGroup = useCampaignStore((state) => state.getAdGroup(campaignId!, adGroupId!));
   const updateAdGroup = useCampaignStore((state) => state.updateAdGroup);
   const addKeyword = useCampaignStore((state) => state.addKeyword);
+  const addKeywords = useCampaignStore((state) => state.addKeywords);
   const updateKeyword = useCampaignStore((state) => state.updateKeyword);
   const deleteKeyword = useCampaignStore((state) => state.deleteKeyword);
 
@@ -105,9 +109,40 @@ const AdGroupBuilder = () => {
     }
   }, [campaignId, adGroupId, selectedAdIds, updateAdsStatus, toast]);
 
+  // Keyword shortcuts and handlers
+  const handleOpenKeywordResearch = useCallback(() => {
+    setIsKeywordResearchModalOpen(true);
+  }, []);
+
+  const handleAddKeywordsFromResearch = useCallback(
+    (
+      keywords: Array<{
+        text: string;
+        matchTypes: MatchTypeSettings;
+      }>
+    ) => {
+      if (!campaignId || !adGroupId) return;
+
+      // Convert research keywords to Keyword entities
+      const keywordsToAdd: Keyword[] = keywords.map((kw) => ({
+        id: `kw-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        text: kw.text,
+      }));
+
+      addKeywords(campaignId, adGroupId, keywordsToAdd);
+      toast.success(`Added ${keywords.length} keyword${keywords.length !== 1 ? 's' : ''} to ad group`);
+    },
+    [campaignId, adGroupId, addKeywords, toast]
+  );
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl/Cmd + K to open keyword research
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        handleOpenKeywordResearch();
+      }
       // Ctrl+A or Cmd+A to select all
       if ((e.ctrlKey || e.metaKey) && e.key === 'a' && adGroup && adGroup.ads.length > 0) {
         e.preventDefault();
@@ -126,7 +161,7 @@ const AdGroupBuilder = () => {
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [adGroup, selectedAdIds, handleSelectAll, handleClearSelection, handleBulkDelete]);
+  }, [adGroup, selectedAdIds, handleSelectAll, handleClearSelection, handleBulkDelete, handleOpenKeywordResearch]);
 
   const handleAddKeyword = () => {
     const newKeyword: Keyword = {
@@ -210,6 +245,7 @@ const AdGroupBuilder = () => {
           onDeleteKeyword={(keywordId) =>
             deleteKeyword(campaignId!, adGroupId!, keywordId)
           }
+          onResearchKeywords={handleOpenKeywordResearch}
         />
 
         <AdList
@@ -263,6 +299,15 @@ const AdGroupBuilder = () => {
         itemNames={selectedAdNames}
         entityType="ad"
         statusType="ad"
+      />
+
+      {/* Keyword Research Modal */}
+      <KeywordResearchModal
+        isOpen={isKeywordResearchModalOpen}
+        onClose={() => setIsKeywordResearchModalOpen(false)}
+        onAddKeywords={handleAddKeywordsFromResearch}
+        initialKeywords={adGroup.keywords.map((k) => k.text)}
+        businessContext=""
       />
     </div>
   );

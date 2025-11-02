@@ -30,6 +30,9 @@ interface CampaignStore {
   updateKeyword: (campaignId: string, adGroupId: string, keywordId: string, updates: Partial<Keyword>) => void;
   deleteKeyword: (campaignId: string, adGroupId: string, keywordId: string) => void;
 
+  // Bulk Keyword Operations
+  addKeywords: (campaignId: string, adGroupId: string, keywords: Keyword[]) => void;
+
   // Ad CRUD
   getAd: (campaignId: string, adGroupId: string, adId: string) => ResponsiveSearchAd | undefined;
   addAd: (campaignId: string, adGroupId: string, ad: ResponsiveSearchAd) => void;
@@ -196,6 +199,28 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
                   ? {
                       ...ag,
                       keywords: ag.keywords.filter((k) => k.id !== keywordId),
+                      updatedAt: new Date().toISOString(),
+                    }
+                  : ag
+              ),
+            }
+          : c
+      ),
+    }));
+  },
+
+  // Bulk Keyword Operations
+  addKeywords: (campaignId, adGroupId, keywords) => {
+    set((state) => ({
+      campaigns: state.campaigns.map((c) =>
+        c.id === campaignId
+          ? {
+              ...c,
+              adGroups: c.adGroups.map((ag) =>
+                ag.id === adGroupId
+                  ? {
+                      ...ag,
+                      keywords: [...ag.keywords, ...keywords],
                       updatedAt: new Date().toISOString(),
                     }
                   : ag
