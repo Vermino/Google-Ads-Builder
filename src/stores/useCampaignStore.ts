@@ -21,7 +21,7 @@ interface CampaignStore {
 
   // Campaign CRUD
   getCampaign: (id: string) => Campaign | undefined;
-  addCampaign: (campaign: Campaign) => Promise<void>;
+  addCampaign: (campaign: Campaign) => Promise<Campaign>;
   updateCampaign: (id: string, updates: Partial<Campaign>) => Promise<void>;
   deleteCampaign: (id: string) => Promise<void>;
 
@@ -110,6 +110,7 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
         campaigns: [...state.campaigns, newCampaign],
         loading: false,
       }));
+      return newCampaign; // Return the campaign with backend-generated ID
     } catch (error: any) {
       set({ error: error.message || 'Failed to create campaign', loading: false });
       throw error;

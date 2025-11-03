@@ -77,10 +77,8 @@ const NewCampaignModal: React.FC<NewCampaignModalProps> = ({ isOpen, onClose }) 
     }
 
     const now = new Date().toISOString();
-    const campaignId = `campaign-${Date.now()}`;
-
     const newCampaign: Campaign = {
-      id: campaignId,
+      id: '', // Backend will generate the ID
       name: formData.name,
       status: formData.status,
       budget: parseFloat(formData.budget),
@@ -98,7 +96,7 @@ const NewCampaignModal: React.FC<NewCampaignModalProps> = ({ isOpen, onClose }) 
       updatedAt: now,
     };
 
-    addCampaign(newCampaign);
+    const createdCampaign = await addCampaign(newCampaign);
 
     // Reset form
     setFormData({
@@ -116,7 +114,7 @@ const NewCampaignModal: React.FC<NewCampaignModalProps> = ({ isOpen, onClose }) 
     setErrors({});
 
     onClose();
-    navigate(`/campaigns/${campaignId}`);
+    navigate(`/campaigns/${createdCampaign.id}`);
   };
 
   const handleChange = (field: string, value: string | boolean) => {
