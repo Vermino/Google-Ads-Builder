@@ -347,11 +347,11 @@ export async function generateAdCopy(
   }
 
   // Throw error if we didn't get enough content
-  // Accept results with at least 3 headlines and 2 descriptions (more lenient for Gemini)
-  if (headlines.length < 3 || descriptions.length < 2) {
+  // Very lenient validation - just need at least 1 of each for manual review
+  if (headlines.length < 1 || descriptions.length < 1) {
     throw new AIServiceError(
       'PARSE_ERROR',
-      `Not enough valid ad copy generated. Got ${headlines.length} headlines and ${descriptions.length} descriptions. Need at least 3 headlines and 2 descriptions.`,
+      `Failed to generate any valid ad copy. Got ${headlines.length} headlines and ${descriptions.length} descriptions. Please try again.`,
       { warnings, rawResponse: response.substring(0, 500) }
     );
   }
