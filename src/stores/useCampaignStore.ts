@@ -8,22 +8,28 @@ import type {
   Description,
   GlobalDescription,
 } from '../types';
-import mockCampaigns from '../mock-data/campaigns';
+import * as campaignService from '../services/campaignService';
 
 interface CampaignStore {
   campaigns: Campaign[];
+  loading: boolean;
+  error: string | null;
+
+  // Data Loading
+  loadCampaigns: () => Promise<void>;
+  refreshCampaign: (id: string) => Promise<void>;
 
   // Campaign CRUD
   getCampaign: (id: string) => Campaign | undefined;
-  addCampaign: (campaign: Campaign) => void;
-  updateCampaign: (id: string, updates: Partial<Campaign>) => void;
-  deleteCampaign: (id: string) => void;
+  addCampaign: (campaign: Campaign) => Promise<void>;
+  updateCampaign: (id: string, updates: Partial<Campaign>) => Promise<void>;
+  deleteCampaign: (id: string) => Promise<void>;
 
   // Ad Group CRUD
   getAdGroup: (campaignId: string, adGroupId: string) => AdGroup | undefined;
-  addAdGroup: (campaignId: string, adGroup: AdGroup) => void;
-  updateAdGroup: (campaignId: string, adGroupId: string, updates: Partial<AdGroup>) => void;
-  deleteAdGroup: (campaignId: string, adGroupId: string) => void;
+  addAdGroup: (campaignId: string, adGroup: AdGroup) => Promise<void>;
+  updateAdGroup: (campaignId: string, adGroupId: string, updates: Partial<AdGroup>) => Promise<void>;
+  deleteAdGroup: (campaignId: string, adGroupId: string) => Promise<void>;
 
   // Keyword CRUD
   addKeyword: (campaignId: string, adGroupId: string, keyword: Keyword) => void;
@@ -35,9 +41,9 @@ interface CampaignStore {
 
   // Ad CRUD
   getAd: (campaignId: string, adGroupId: string, adId: string) => ResponsiveSearchAd | undefined;
-  addAd: (campaignId: string, adGroupId: string, ad: ResponsiveSearchAd) => void;
-  updateAd: (campaignId: string, adGroupId: string, adId: string, updates: Partial<ResponsiveSearchAd>) => void;
-  deleteAd: (campaignId: string, adGroupId: string, adId: string) => void;
+  addAd: (campaignId: string, adGroupId: string, ad: ResponsiveSearchAd) => Promise<void>;
+  updateAd: (campaignId: string, adGroupId: string, adId: string, updates: Partial<ResponsiveSearchAd>) => Promise<void>;
+  deleteAd: (campaignId: string, adGroupId: string, adId: string) => Promise<void>;
 
   // Headline Management
   addHeadline: (campaignId: string, adGroupId: string, adId: string, headline: Headline) => void;
@@ -53,42 +59,89 @@ interface CampaignStore {
   updateGlobalDescription: (campaignId: string, descriptionId: string, updates: Partial<GlobalDescription>) => void;
 
   // Bulk Ad Group Operations
-  deleteAdGroups: (campaignId: string, adGroupIds: string[]) => void;
+  deleteAdGroups: (campaignId: string, adGroupIds: string[]) => Promise<void>;
   duplicateAdGroups: (campaignId: string, adGroupIds: string[]) => void;
   updateAdGroupsStatus: (campaignId: string, adGroupIds: string[], status: AdGroup['status']) => void;
 
   // Bulk Ad Operations
-  deleteAds: (campaignId: string, adGroupId: string, adIds: string[]) => void;
+  deleteAds: (campaignId: string, adGroupId: string, adIds: string[]) => Promise<void>;
   duplicateAds: (campaignId: string, adGroupId: string, adIds: string[]) => void;
   updateAdsStatus: (campaignId: string, adGroupId: string, adIds: string[], status: ResponsiveSearchAd['status']) => void;
 }
 
 export const useCampaignStore = create<CampaignStore>((set, get) => ({
-  campaigns: mockCampaigns,
+  campaigns: [],
+  loading: false,
+  error: null,
+
+  // Data Loading
+  loadCampaigns: async () => {
+    set({ loading: true, error: null });
+    try {
+      const campaigns = await campaignService.fetchCampaigns();
+      set({ campaigns, loading: false });
+    } catch (error: any) {
+      set({ error: error.message || 'Failed to load campaigns', loading: false });
+      console.error('Failed to load campaigns:', error);
+    }
+  },
+
+  refreshCampaign: async (id) => {
+    try {
+      const campaign = await campaignService.fetchCampaign(id);
+      set((state) => ({
+        campaigns: state.campaigns.map((c) => (c.id === id ? campaign : c)),
+      }));
+    } catch (error: any) {
+      console.error(`Failed to refresh campaign ${id}:`, error);
+    }
+  },
 
   // Campaign CRUD
   getCampaign: (id) => {
     return get().campaigns.find((c) => c.id === id);
   },
 
-  addCampaign: (campaign) => {
-    set((state) => ({
-      campaigns: [...state.campaigns, campaign],
-    }));
+  addCampaign: async (campaign) => {
+    set({ loading: true, error: null });
+    try {
+      const newCampaign = await campaignService.createCampaign(campaign);
+      set((state) => ({
+        campaigns: [...state.campaigns, newCampaign],
+        loading: false,
+      }));
+    } catch (error: any) {
+      set({ error: error.message || 'Failed to create campaign', loading: false });
+      throw error;
+    }
   },
 
-  updateCampaign: (id, updates) => {
-    set((state) => ({
-      campaigns: state.campaigns.map((c) =>
-        c.id === id ? { ...c, ...updates, updatedAt: new Date().toISOString() } : c
-      ),
-    }));
+  updateCampaign: async (id, updates) => {
+    set({ loading: true, error: null });
+    try {
+      const updatedCampaign = await campaignService.updateCampaign(id, updates);
+      set((state) => ({
+        campaigns: state.campaigns.map((c) => (c.id === id ? updatedCampaign : c)),
+        loading: false,
+      }));
+    } catch (error: any) {
+      set({ error: error.message || 'Failed to update campaign', loading: false });
+      throw error;
+    }
   },
 
-  deleteCampaign: (id) => {
-    set((state) => ({
-      campaigns: state.campaigns.filter((c) => c.id !== id),
-    }));
+  deleteCampaign: async (id) => {
+    set({ loading: true, error: null });
+    try {
+      await campaignService.deleteCampaign(id);
+      set((state) => ({
+        campaigns: state.campaigns.filter((c) => c.id !== id),
+        loading: false,
+      }));
+    } catch (error: any) {
+      set({ error: error.message || 'Failed to delete campaign', loading: false });
+      throw error;
+    }
   },
 
   // Ad Group CRUD
@@ -97,50 +150,64 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
     return campaign?.adGroups.find((ag) => ag.id === adGroupId);
   },
 
-  addAdGroup: (campaignId, adGroup) => {
-    set((state) => ({
-      campaigns: state.campaigns.map((c) =>
-        c.id === campaignId
-          ? {
-              ...c,
-              adGroups: [...c.adGroups, adGroup],
-              updatedAt: new Date().toISOString(),
-            }
-          : c
-      ),
-    }));
+  addAdGroup: async (campaignId, adGroup) => {
+    try {
+      const newAdGroup = await campaignService.createAdGroup({ ...adGroup, campaignId });
+      set((state) => ({
+        campaigns: state.campaigns.map((c) =>
+          c.id === campaignId
+            ? {
+                ...c,
+                adGroups: [...c.adGroups, newAdGroup],
+                updatedAt: new Date().toISOString(),
+              }
+            : c
+        ),
+      }));
+    } catch (error: any) {
+      console.error('Failed to create ad group:', error);
+      throw error;
+    }
   },
 
-  updateAdGroup: (campaignId, adGroupId, updates) => {
-    set((state) => ({
-      campaigns: state.campaigns.map((c) =>
-        c.id === campaignId
-          ? {
-              ...c,
-              adGroups: c.adGroups.map((ag) =>
-                ag.id === adGroupId
-                  ? { ...ag, ...updates, updatedAt: new Date().toISOString() }
-                  : ag
-              ),
-              updatedAt: new Date().toISOString(),
-            }
-          : c
-      ),
-    }));
+  updateAdGroup: async (campaignId, adGroupId, updates) => {
+    try {
+      const updatedAdGroup = await campaignService.updateAdGroup(adGroupId, updates);
+      set((state) => ({
+        campaigns: state.campaigns.map((c) =>
+          c.id === campaignId
+            ? {
+                ...c,
+                adGroups: c.adGroups.map((ag) => (ag.id === adGroupId ? updatedAdGroup : ag)),
+                updatedAt: new Date().toISOString(),
+              }
+            : c
+        ),
+      }));
+    } catch (error: any) {
+      console.error('Failed to update ad group:', error);
+      throw error;
+    }
   },
 
-  deleteAdGroup: (campaignId, adGroupId) => {
-    set((state) => ({
-      campaigns: state.campaigns.map((c) =>
-        c.id === campaignId
-          ? {
-              ...c,
-              adGroups: c.adGroups.filter((ag) => ag.id !== adGroupId),
-              updatedAt: new Date().toISOString(),
-            }
-          : c
-      ),
-    }));
+  deleteAdGroup: async (campaignId, adGroupId) => {
+    try {
+      await campaignService.deleteAdGroup(adGroupId);
+      set((state) => ({
+        campaigns: state.campaigns.map((c) =>
+          c.id === campaignId
+            ? {
+                ...c,
+                adGroups: c.adGroups.filter((ag) => ag.id !== adGroupId),
+                updatedAt: new Date().toISOString(),
+              }
+            : c
+        ),
+      }));
+    } catch (error: any) {
+      console.error('Failed to delete ad group:', error);
+      throw error;
+    }
   },
 
   // Keyword CRUD
@@ -237,71 +304,85 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
     return adGroup?.ads.find((ad) => ad.id === adId);
   },
 
-  addAd: (campaignId, adGroupId, ad) => {
-    set((state) => ({
-      campaigns: state.campaigns.map((c) =>
-        c.id === campaignId
-          ? {
-              ...c,
-              adGroups: c.adGroups.map((ag) =>
-                ag.id === adGroupId
-                  ? {
-                      ...ag,
-                      ads: [...ag.ads, ad],
-                      updatedAt: new Date().toISOString(),
-                    }
-                  : ag
-              ),
-            }
-          : c
-      ),
-    }));
+  addAd: async (campaignId, adGroupId, ad) => {
+    try {
+      const newAd = await campaignService.createAd({ ...ad, adGroupId });
+      set((state) => ({
+        campaigns: state.campaigns.map((c) =>
+          c.id === campaignId
+            ? {
+                ...c,
+                adGroups: c.adGroups.map((ag) =>
+                  ag.id === adGroupId
+                    ? {
+                        ...ag,
+                        ads: [...ag.ads, newAd],
+                        updatedAt: new Date().toISOString(),
+                      }
+                    : ag
+                ),
+              }
+            : c
+        ),
+      }));
+    } catch (error: any) {
+      console.error('Failed to create ad:', error);
+      throw error;
+    }
   },
 
-  updateAd: (campaignId, adGroupId, adId, updates) => {
-    set((state) => ({
-      campaigns: state.campaigns.map((c) =>
-        c.id === campaignId
-          ? {
-              ...c,
-              adGroups: c.adGroups.map((ag) =>
-                ag.id === adGroupId
-                  ? {
-                      ...ag,
-                      ads: ag.ads.map((ad) =>
-                        ad.id === adId
-                          ? { ...ad, ...updates, updatedAt: new Date().toISOString() }
-                          : ad
-                      ),
-                      updatedAt: new Date().toISOString(),
-                    }
-                  : ag
-              ),
-            }
-          : c
-      ),
-    }));
+  updateAd: async (campaignId, adGroupId, adId, updates) => {
+    try {
+      const updatedAd = await campaignService.updateAd(adId, updates);
+      set((state) => ({
+        campaigns: state.campaigns.map((c) =>
+          c.id === campaignId
+            ? {
+                ...c,
+                adGroups: c.adGroups.map((ag) =>
+                  ag.id === adGroupId
+                    ? {
+                        ...ag,
+                        ads: ag.ads.map((ad) => (ad.id === adId ? updatedAd : ad)),
+                        updatedAt: new Date().toISOString(),
+                      }
+                    : ag
+                ),
+              }
+            : c
+        ),
+      }));
+    } catch (error: any) {
+      console.error('Failed to update ad:', error);
+      throw error;
+    }
   },
 
-  deleteAd: (campaignId, adGroupId, adId) => {
-    set((state) => ({
-      campaigns: state.campaigns.map((c) =>
-        c.id === campaignId
-          ? {
-              ...c,
-              adGroups: c.adGroups.map((ag) =>
-                ag.id === adGroupId
-                  ? {
-                      ...ag,
-                      ads: ag.ads.filter((ad) => ad.id !== adId),
-                      updatedAt: new Date().toISOString(),
-                    }
-                  : ag
-              ),
-            }
-          : c
-      ),
-    }));
+  deleteAd: async (campaignId, adGroupId, adId) => {
+    try {
+      await campaignService.deleteAd(adId);
+      set((state) => ({
+        campaigns: state.campaigns.map((c) =>
+          c.id === campaignId
+            ? {
+                ...c,
+                adGroups: c.adGroups.map((ag) =>
+                  ag.id === adGroupId
+                    ? {
+                        ...ag,
+                        ads: ag.ads.filter((ad) => ad.id !== adId),
+                        updatedAt: new Date().toISOString(),
+                      }
+                    : ag
+                ),
+              }
+            : c
+        ),
+      }));
+    } catch (error: any) {
+      console.error('Failed to delete ad:', error);
+      throw error;
+    }
   },
 
   // Headline Management
@@ -496,18 +577,26 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
   },
 
   // Bulk Ad Group Operations
-  deleteAdGroups: (campaignId, adGroupIds) => {
-    set((state) => ({
-      campaigns: state.campaigns.map((c) =>
-        c.id === campaignId
-          ? {
-              ...c,
-              adGroups: c.adGroups.filter((ag) => !adGroupIds.includes(ag.id)),
-              updatedAt: new Date().toISOString(),
-            }
-          : c
-      ),
-    }));
+  deleteAdGroups: async (campaignId, adGroupIds) => {
+    try {
+      // Delete all ad groups in parallel
+      await Promise.all(adGroupIds.map((id) => campaignService.deleteAdGroup(id)));
+
+      set((state) => ({
+        campaigns: state.campaigns.map((c) =>
+          c.id === campaignId
+            ? {
+                ...c,
+                adGroups: c.adGroups.filter((ag) => !adGroupIds.includes(ag.id)),
+                updatedAt: new Date().toISOString(),
+              }
+            : c
+        ),
+      }));
+    } catch (error: any) {
+      console.error('Failed to delete ad groups:', error);
+      throw error;
+    }
   },
 
   duplicateAdGroups: (campaignId, adGroupIds) => {
@@ -560,26 +649,34 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
   },
 
   // Bulk Ad Operations
-  deleteAds: (campaignId, adGroupId, adIds) => {
-    set((state) => ({
-      campaigns: state.campaigns.map((c) =>
-        c.id === campaignId
-          ? {
-              ...c,
-              adGroups: c.adGroups.map((ag) =>
-                ag.id === adGroupId
-                  ? {
-                      ...ag,
-                      ads: ag.ads.filter((ad) => !adIds.includes(ad.id)),
-                      updatedAt: new Date().toISOString(),
-                    }
-                  : ag
-              ),
-              updatedAt: new Date().toISOString(),
-            }
-          : c
-      ),
-    }));
+  deleteAds: async (campaignId, adGroupId, adIds) => {
+    try {
+      // Delete all ads in parallel
+      await Promise.all(adIds.map((id) => campaignService.deleteAd(id)));
+
+      set((state) => ({
+        campaigns: state.campaigns.map((c) =>
+          c.id === campaignId
+            ? {
+                ...c,
+                adGroups: c.adGroups.map((ag) =>
+                  ag.id === adGroupId
+                    ? {
+                        ...ag,
+                        ads: ag.ads.filter((ad) => !adIds.includes(ad.id)),
+                        updatedAt: new Date().toISOString(),
+                      }
+                    : ag
+                ),
+                updatedAt: new Date().toISOString(),
+              }
+            : c
+        ),
+      }));
+    } catch (error: any) {
+      console.error('Failed to delete ads:', error);
+      throw error;
+    }
   },
 
   duplicateAds: (campaignId, adGroupId, adIds) => {
