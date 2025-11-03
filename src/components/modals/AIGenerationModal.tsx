@@ -4,7 +4,7 @@ import Modal from '@/components/common/Modal';
 import Button from '@/components/common/Button';
 import AIGenerationResults from '@/components/ads/AIGenerationResults';
 import { useAIGeneration } from '@/hooks/useAIGeneration';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { apiClient } from '@/services/apiClient';
 import type { AIProvider, AdTone, GenerateAdCopyRequest } from '@/services/aiService';
 
 export interface AIGenerationModalProps {
@@ -29,9 +29,9 @@ const AIGenerationModal: React.FC<AIGenerationModalProps> = ({
   initialBusinessDescription = '',
   initialKeywords = [],
 }) => {
-  // Local storage for API keys
-  const [openaiKey] = useLocalStorage<string>('ai_openai_key', '');
-  const [claudeKey] = useLocalStorage<string>('ai_claude_key', '');
+  // Backend provider availability
+  const [availableProviders, setAvailableProviders] = useState<string[]>([]);
+  const [checkingProviders, setCheckingProviders] = useState(false);
 
   // AI generation hook
   const {
@@ -45,15 +45,15 @@ const AIGenerationModal: React.FC<AIGenerationModalProps> = ({
   } = useAIGeneration();
 
   // Form state
-  const [provider, setProvider] = useState<AIProvider>('openai');
+  const [provider, setProvider] = useState<AIProvider>('gemini');
   const [businessDescription, setBusinessDescription] = useState(initialBusinessDescription);
   const [targetKeywords, setTargetKeywords] = useState(initialKeywords.join(', '));
   const [tone, setTone] = useState<AdTone>('professional');
   const [callToAction, setCallToAction] = useState('');
   const [uniqueSellingPoints, setUniqueSellingPoints] = useState('');
   const [targetAudience, setTargetAudience] = useState('');
-  const [headlineCount, setHeadlineCount] = useState(15);
-  const [descriptionCount, setDescriptionCount] = useState(4);
+  const [headlineCount, setHeadlineCount] = useState(30);
+  const [descriptionCount, setDescriptionCount] = useState(8);
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   // Form validation
@@ -62,20 +62,38 @@ const AIGenerationModal: React.FC<AIGenerationModalProps> = ({
   // Refs for focus management
   const firstInputRef = useRef<HTMLTextAreaElement>(null);
 
-  // Reset form when modal opens
+  // Check available providers on mount and when modal opens
   useEffect(() => {
+    const checkProviders = async () => {
+      setCheckingProviders(true);
+      try {
+        const result = await apiClient.getProviders();
+        // Backend returns { success: true, data: { providers: [...] } }
+        const providers = (result as any).data?.providers || result.providers || [];
+        setAvailableProviders(providers);
+
+        // Set default provider based on available providers (prefer Gemini)
+        if (providers?.includes('gemini')) {
+          setProvider('gemini');
+        } else if (providers?.includes('claude')) {
+          setProvider('claude');
+        } else if (providers?.includes('openai')) {
+          setProvider('openai');
+        }
+      } catch (err) {
+        console.error('Failed to check providers:', err);
+        setAvailableProviders([]);
+      } finally {
+        setCheckingProviders(false);
+      }
+    };
+
     if (isOpen) {
+      checkProviders();
       setBusinessDescription(initialBusinessDescription);
       setTargetKeywords(initialKeywords.join(', '));
       setValidationErrors({});
       clearError();
-
-      // Set default provider based on available API keys
-      if (openaiKey) {
-        setProvider('openai');
-      } else if (claudeKey) {
-        setProvider('claude');
-      }
 
       // Focus first input
       setTimeout(() => firstInputRef.current?.focus(), 100);
@@ -83,12 +101,12 @@ const AIGenerationModal: React.FC<AIGenerationModalProps> = ({
       // Clear generated copy when closing
       clearGeneratedCopy();
     }
-  }, [isOpen, initialBusinessDescription, initialKeywords, openaiKey, claudeKey, clearError, clearGeneratedCopy]);
+  }, [isOpen, initialBusinessDescription, initialKeywords, clearError, clearGeneratedCopy]);
 
   // Check if any provider is configured
-  const hasConfiguredProvider = openaiKey || claudeKey;
+  const hasConfiguredProvider = availableProviders.length > 0;
   const isProviderAvailable = (p: AIProvider) => {
-    return p === 'openai' ? !!openaiKey : !!claudeKey;
+    return availableProviders.includes(p);
   };
 
   // Validate form
@@ -101,12 +119,12 @@ const AIGenerationModal: React.FC<AIGenerationModalProps> = ({
       errors.businessDescription = 'Business description must be at least 10 characters';
     }
 
-    if (headlineCount < 3 || headlineCount > 15) {
-      errors.headlineCount = 'Headline count must be between 3 and 15';
+    if (headlineCount < 3 || headlineCount > 30) {
+      errors.headlineCount = 'Headline count must be between 3 and 30';
     }
 
-    if (descriptionCount < 2 || descriptionCount > 4) {
-      errors.descriptionCount = 'Description count must be between 2 and 4';
+    if (descriptionCount < 2 || descriptionCount > 8) {
+      errors.descriptionCount = 'Description count must be between 2 and 8';
     }
 
     setValidationErrors(errors);
@@ -174,17 +192,17 @@ const AIGenerationModal: React.FC<AIGenerationModalProps> = ({
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title="Generate Ad Copy with AI" size="xl">
       <div className="space-y-6">
-        {/* No API Key Warning */}
-        {!hasConfiguredProvider && (
+        {/* No Provider Warning */}
+        {!hasConfiguredProvider && !checkingProviders && (
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
             <div className="flex items-start">
               <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5" />
               <div className="ml-3">
                 <h4 className="text-sm font-semibold text-yellow-800">
-                  No API Key Configured
+                  No AI Provider Configured
                 </h4>
                 <p className="text-sm text-yellow-700 mt-1">
-                  Please configure your OpenAI or Claude API key in Settings to use AI generation.
+                  Please configure your Claude session token in Settings to use AI generation.
                 </p>
               </div>
             </div>
@@ -226,55 +244,13 @@ const AIGenerationModal: React.FC<AIGenerationModalProps> = ({
             }}
             className="space-y-5"
           >
-            {/* AI Provider Selection */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                AI Provider
-              </label>
-              <div className="flex space-x-4">
-                <label
-                  className={`flex-1 flex items-center justify-center px-4 py-3 border-2 rounded-lg cursor-pointer transition-all ${
-                    provider === 'openai'
-                      ? 'border-blue-600 bg-blue-50 text-blue-900'
-                      : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
-                  } ${!isProviderAvailable('openai') ? 'opacity-50 cursor-not-allowed' : ''}`}
-                >
-                  <input
-                    type="radio"
-                    name="provider"
-                    value="openai"
-                    checked={provider === 'openai'}
-                    onChange={(e) => setProvider(e.target.value as AIProvider)}
-                    disabled={!isProviderAvailable('openai')}
-                    className="sr-only"
-                  />
-                  <span className="font-medium">OpenAI GPT-4</span>
-                  {!isProviderAvailable('openai') && (
-                    <span className="ml-2 text-xs">(Not configured)</span>
-                  )}
-                </label>
-
-                <label
-                  className={`flex-1 flex items-center justify-center px-4 py-3 border-2 rounded-lg cursor-pointer transition-all ${
-                    provider === 'claude'
-                      ? 'border-blue-600 bg-blue-50 text-blue-900'
-                      : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
-                  } ${!isProviderAvailable('claude') ? 'opacity-50 cursor-not-allowed' : ''}`}
-                >
-                  <input
-                    type="radio"
-                    name="provider"
-                    value="claude"
-                    checked={provider === 'claude'}
-                    onChange={(e) => setProvider(e.target.value as AIProvider)}
-                    disabled={!isProviderAvailable('claude')}
-                    className="sr-only"
-                  />
-                  <span className="font-medium">Claude Sonnet</span>
-                  {!isProviderAvailable('claude') && (
-                    <span className="ml-2 text-xs">(Not configured)</span>
-                  )}
-                </label>
+            {/* AI Provider Info - Gemini Only */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <div className="flex items-center gap-2">
+                <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+                </svg>
+                <span className="text-sm font-medium text-blue-900">Powered by Google Gemini 1.5 Pro</span>
               </div>
             </div>
 
@@ -404,7 +380,7 @@ const AIGenerationModal: React.FC<AIGenerationModalProps> = ({
                         value={headlineCount}
                         onChange={(e) => setHeadlineCount(parseInt(e.target.value, 10))}
                         min={3}
-                        max={15}
+                        max={30}
                         className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                           validationErrors.headlineCount ? 'border-red-500' : 'border-gray-300'
                         }`}
@@ -424,7 +400,7 @@ const AIGenerationModal: React.FC<AIGenerationModalProps> = ({
                         value={descriptionCount}
                         onChange={(e) => setDescriptionCount(parseInt(e.target.value, 10))}
                         min={2}
-                        max={4}
+                        max={8}
                         className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                           validationErrors.descriptionCount ? 'border-red-500' : 'border-gray-300'
                         }`}

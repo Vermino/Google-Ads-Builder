@@ -178,24 +178,24 @@ Unique Selling Points:
   • ${uspsText}
 
 ## TASK
-Generate ${headlineCount} unique headlines (5 per category) and ${descriptionCount} descriptions for Google Ads Responsive Search Ads.
+Generate ${headlineCount} unique headlines (distributed across 3 categories) and ${descriptionCount} descriptions for Google Ads Responsive Search Ads.
 
 ## HEADLINE STRATEGY - 3 CATEGORIES
 Google shows 3 headlines at a time. Create variety across these categories:
 
-### CATEGORY 1: [KEYWORD] - Keyword-Focused (5 headlines)
+### CATEGORY 1: [KEYWORD] - Keyword-Focused (${Math.floor(headlineCount / 3)} headlines)
 - Include target keywords naturally
 - Problem-focused or benefit-focused
 - Optimized for search relevance
 Examples: "Gain Instagram Followers Fast", "Affordable Instagram Growth", "Real Instagram Engagement"
 
-### CATEGORY 2: [VALUE] - Value Proposition (5 headlines)
+### CATEGORY 2: [VALUE] - Value Proposition (${Math.floor(headlineCount / 3)} headlines)
 - Highlight unique selling points
 - Emphasize differentiators
 - Show what makes the business special
 Examples: "Expert-Backed Strategies", "Real Followers, Not Bots", "Trusted by 10,000+ Users"
 
-### CATEGORY 3: [CTA] - Call-to-Action & Brand (5 headlines)
+### CATEGORY 3: [CTA] - Call-to-Action & Brand (${Math.floor(headlineCount / 3)} headlines)
 - Strong calls-to-action
 - Urgency or social proof
 - Brand reinforcement
@@ -218,30 +218,34 @@ Examples: "Start Growing Today", "Try Risk-Free Now", "Join Happy Customers"
 ❌ DON'T: Excessive punctuation (!!), ALL CAPS (except acronyms), unproven superlatives, clickbait
 
 ## OUTPUT FORMAT
-Format EXACTLY as shown. Include category labels [KEYWORD], [VALUE], or [CTA] before each headline:
+Format EXACTLY as shown. Include category labels [KEYWORD], [VALUE], or [CTA] before each headline.
+Generate ${headlineCount} headlines total (${Math.floor(headlineCount / 3)} per category) and ${descriptionCount} descriptions:
 
 HEADLINES:
+[First ${Math.floor(headlineCount / 3)} are KEYWORD]
 1. [KEYWORD] Headline text here (XX chars)
 2. [KEYWORD] Headline text here (XX chars)
-3. [KEYWORD] Headline text here (XX chars)
-4. [KEYWORD] Headline text here (XX chars)
-5. [KEYWORD] Headline text here (XX chars)
-6. [VALUE] Headline text here (XX chars)
-7. [VALUE] Headline text here (XX chars)
-8. [VALUE] Headline text here (XX chars)
-9. [VALUE] Headline text here (XX chars)
-10. [VALUE] Headline text here (XX chars)
-11. [CTA] Headline text here (XX chars)
-12. [CTA] Headline text here (XX chars)
-13. [CTA] Headline text here (XX chars)
-14. [CTA] Headline text here (XX chars)
-15. [CTA] Headline text here (XX chars)
+...continue to ${Math.floor(headlineCount / 3)}
+
+[Next ${Math.floor(headlineCount / 3)} are VALUE]
+${Math.floor(headlineCount / 3) + 1}. [VALUE] Headline text here (XX chars)
+${Math.floor(headlineCount / 3) + 2}. [VALUE] Headline text here (XX chars)
+...continue to ${Math.floor(headlineCount / 3) * 2}
+
+[Final ${Math.floor(headlineCount / 3)} are CTA]
+${Math.floor(headlineCount / 3) * 2 + 1}. [CTA] Headline text here (XX chars)
+${Math.floor(headlineCount / 3) * 2 + 2}. [CTA] Headline text here (XX chars)
+...continue to ${headlineCount}
 
 DESCRIPTIONS:
 1. Description text here (XX chars)
 2. Description text here (XX chars)
 3. Description text here (XX chars)
 4. Description text here (XX chars)
+5. Description text here (XX chars)
+6. Description text here (XX chars)
+7. Description text here (XX chars)
+8. Description text here (XX chars)
 
 Now generate the ad copy following ALL requirements above.`;
 }
@@ -339,8 +343,8 @@ export async function generateAdCopy(
   provider: AIProvider = 'gemini'
 ): Promise<GeneratedAdCopy> {
   const {
-    headlineCount = 15,
-    descriptionCount = 4,
+    headlineCount = 30,
+    descriptionCount = 8,
   } = request;
 
   // Build structured prompt
