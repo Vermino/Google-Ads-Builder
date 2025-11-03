@@ -19,6 +19,13 @@ export class AIServiceError extends Error {
 
 export type AIProvider = 'claude' | 'gemini';
 
+export type HeadlineCategory = 'KEYWORD' | 'VALUE' | 'CTA' | 'GENERAL';
+
+export interface HeadlineWithCategory {
+  text: string;
+  category: HeadlineCategory;
+}
+
 interface GenerateAdCopyRequest {
   businessDescription: string;
   targetKeywords?: string[];
@@ -31,7 +38,7 @@ interface GenerateAdCopyRequest {
 }
 
 interface GeneratedAdCopy {
-  headlines: string[];
+  headlines: HeadlineWithCategory[];
   descriptions: string[];
   generatedAt: string;
 }
@@ -159,7 +166,7 @@ function buildAdCopyPrompt(request: GenerateAdCopyRequest): string {
   const audienceText = targetAudience || 'General audience';
   const ctaText = callToAction || 'None specified';
 
-  return `You are an expert Google Ads copywriter. Generate compelling, conversion-focused ad copy that strictly adheres to Google Ads policies and character limits.
+  return `You are an expert Google Ads copywriter specializing in Responsive Search Ads (RSAs). Generate compelling, conversion-focused ad copy with strategic variety.
 
 ## BUSINESS CONTEXT
 Business Description: ${businessDescription}
@@ -171,53 +178,70 @@ Unique Selling Points:
   • ${uspsText}
 
 ## TASK
-Generate ${headlineCount} unique headlines and ${descriptionCount} unique descriptions for Google Ads Responsive Search Ads.
+Generate ${headlineCount} unique headlines (5 per category) and ${descriptionCount} descriptions for Google Ads Responsive Search Ads.
 
-## STRICT CHARACTER LIMITS - EXTREMELY IMPORTANT!
-⚠️⚠️⚠️ CRITICAL - DO NOT EXCEED THESE LIMITS ⚠️⚠️⚠️
+## HEADLINE STRATEGY - 3 CATEGORIES
+Google shows 3 headlines at a time. Create variety across these categories:
 
-HEADLINES: Must be 30 characters or LESS (including spaces and punctuation)
-DESCRIPTIONS: Must be 90 characters or LESS (including spaces and punctuation)
+### CATEGORY 1: [KEYWORD] - Keyword-Focused (5 headlines)
+- Include target keywords naturally
+- Problem-focused or benefit-focused
+- Optimized for search relevance
+Examples: "Gain Instagram Followers Fast", "Affordable Instagram Growth", "Real Instagram Engagement"
 
-Count every character carefully! If a description is 91+ characters, it WILL BE REJECTED.
-Keep descriptions SHORT and CONCISE. Aim for 70-85 characters to be safe.
+### CATEGORY 2: [VALUE] - Value Proposition (5 headlines)
+- Highlight unique selling points
+- Emphasize differentiators
+- Show what makes the business special
+Examples: "Expert-Backed Strategies", "Real Followers, Not Bots", "Trusted by 10,000+ Users"
 
-## GOOGLE ADS EDITORIAL GUIDELINES
-Your copy MUST follow these rules:
-1. ✅ Use proper grammar, spelling, and punctuation
-2. ✅ Be clear, specific, and relevant to the business
-3. ✅ Include keywords naturally when possible
-4. ✅ Use action-oriented language
-5. ✅ Highlight unique value propositions
-6. ❌ NO excessive punctuation (!!!, ???, etc.)
-7. ❌ NO all caps words (except acronyms like "USA")
-8. ❌ NO superlatives without proof ("best", "cheapest")
-9. ❌ NO misleading claims or clickbait
-10. ❌ NO inappropriate spacing or symbols
+### CATEGORY 3: [CTA] - Call-to-Action & Brand (5 headlines)
+- Strong calls-to-action
+- Urgency or social proof
+- Brand reinforcement
+Examples: "Start Growing Today", "Try Risk-Free Now", "Join Happy Customers"
 
-## BEST PRACTICES
-- Vary your headlines for different angles (features, benefits, urgency, social proof)
-- Include at least 3 headlines with target keywords
-- Use numbers and specifics when possible ("24/7 Support", "Save 30%")
-- Create urgency when appropriate ("Limited Time", "Today Only")
-- Include the call-to-action in at least 2 headlines
-- Make descriptions SHORT, informative and action-oriented (70-85 chars is ideal)
-- Front-load important information
-- Use abbreviations if needed to stay under limits (& instead of and, etc.)
+## CRITICAL REQUIREMENTS
+
+### Character Limits (STRICT!)
+- HEADLINES: 30 characters or LESS
+- DESCRIPTIONS: 90 characters or LESS (aim for 70-85 to be safe)
+
+### Uniqueness Rules
+- NO repetitive phrases across headlines (avoid: "Grow Your X", "Boost Your X", "Get More X")
+- Each headline must use DIFFERENT messaging angles
+- Vary sentence structure and word choice
+- Use synonyms and alternative phrasing
+
+### Google Ads Compliance
+✅ DO: Proper grammar, specific claims, action verbs, natural keywords
+❌ DON'T: Excessive punctuation (!!), ALL CAPS (except acronyms), unproven superlatives, clickbait
 
 ## OUTPUT FORMAT
-You MUST format your response EXACTLY as shown below. Do not include any other text, explanations, or commentary.
+Format EXACTLY as shown. Include category labels [KEYWORD], [VALUE], or [CTA] before each headline:
 
 HEADLINES:
-1. [Headline text here] (XX chars)
-2. [Headline text here] (XX chars)
-3. [Headline text here] (XX chars)
-[Continue for all ${headlineCount} headlines]
+1. [KEYWORD] Headline text here (XX chars)
+2. [KEYWORD] Headline text here (XX chars)
+3. [KEYWORD] Headline text here (XX chars)
+4. [KEYWORD] Headline text here (XX chars)
+5. [KEYWORD] Headline text here (XX chars)
+6. [VALUE] Headline text here (XX chars)
+7. [VALUE] Headline text here (XX chars)
+8. [VALUE] Headline text here (XX chars)
+9. [VALUE] Headline text here (XX chars)
+10. [VALUE] Headline text here (XX chars)
+11. [CTA] Headline text here (XX chars)
+12. [CTA] Headline text here (XX chars)
+13. [CTA] Headline text here (XX chars)
+14. [CTA] Headline text here (XX chars)
+15. [CTA] Headline text here (XX chars)
 
 DESCRIPTIONS:
-1. [Description text here] (XX chars)
-2. [Description text here] (XX chars)
-[Continue for all ${descriptionCount} descriptions]
+1. Description text here (XX chars)
+2. Description text here (XX chars)
+3. Description text here (XX chars)
+4. Description text here (XX chars)
 
 Now generate the ad copy following ALL requirements above.`;
 }
@@ -229,8 +253,8 @@ function parseAdCopyResponse(
   response: string,
   expectedHeadlines: number,
   expectedDescriptions: number
-): { headlines: string[]; descriptions: string[]; warnings: string[] } {
-  const headlines: string[] = [];
+): { headlines: HeadlineWithCategory[]; descriptions: string[]; warnings: string[] } {
+  const headlines: HeadlineWithCategory[] = [];
   const descriptions: string[] = [];
   const warnings: string[] = [];
 
@@ -249,38 +273,37 @@ function parseAdCopyResponse(
       continue;
     }
 
-    // Match numbered lines: "1. Text here (30 chars)" or "1. Text here"
-    const match = trimmed.match(/^\d+\.\s*(.+?)(?:\s*\(\d+\s*chars?\))?$/i);
+    // Match numbered lines with optional category: "1. [KEYWORD] Text here (30 chars)" or "1. Text here"
+    const match = trimmed.match(/^\d+\.\s*(?:\[([A-Z]+)\]\s*)?(.+?)(?:\s*\(\d+\s*chars?\))?$/i);
     if (!match) continue;
 
-    let text = match[1].trim();
+    const categoryMatch = match[1];
+    let text = match[2].trim();
 
     // Remove any character count notation that might be in the text
     text = text.replace(/\s*\(\d+\s*chars?\)\s*$/i, '').trim();
 
     // Validate and add to appropriate section
     if (section === 'headlines') {
+      // Extract category (default to GENERAL if not specified)
+      let category: HeadlineCategory = 'GENERAL';
+      if (categoryMatch) {
+        const cat = categoryMatch.toUpperCase();
+        if (cat === 'KEYWORD' || cat === 'VALUE' || cat === 'CTA') {
+          category = cat;
+        }
+      }
+
       if (text.length === 0) {
         warnings.push(`Empty headline at line: "${trimmed}"`);
-      } else if (text.length > 30) {
-        // Try to truncate if slightly too long (up to 35 chars)
-        if (text.length <= 35) {
-          const originalLength = text.length;
-          const truncated = text.substring(0, 30).trim();
-          // Try to end at word boundary
-          const lastSpace = truncated.lastIndexOf(' ');
-          if (lastSpace > 20) {
-            text = truncated.substring(0, lastSpace);
-          } else {
-            text = truncated;
-          }
-          warnings.push(`Headline auto-truncated from ${originalLength} to ${text.length} chars`);
-          headlines.push(text);
-        } else {
-          warnings.push(`Headline too long (${text.length} chars): "${text.substring(0, 40)}..."`);
-        }
       } else {
-        headlines.push(text);
+        // Accept ALL lengths for manual review
+        headlines.push({ text, category });
+
+        // Add warning if over limit
+        if (text.length > 30) {
+          warnings.push(`⚠️ Headline over limit (${text.length} chars): "${text.substring(0, 40)}..." - Review and adjust manually`);
+        }
       }
     } else if (section === 'descriptions') {
       if (text.length === 0) {
@@ -346,6 +369,11 @@ export async function generateAdCopy(
     warnings.forEach(w => console.warn(`   - ${w}`));
   }
 
+  // DEBUG: Log what we got from parsing
+  console.log(`📊 Parsed results: ${headlines.length} headlines, ${descriptions.length} descriptions`);
+  console.log(`📝 Headlines:`, headlines);
+  console.log(`📝 Descriptions:`, descriptions);
+
   // Throw error if we didn't get enough content
   // Very lenient validation - just need at least 1 of each for manual review
   if (headlines.length < 1 || descriptions.length < 1) {
@@ -355,6 +383,8 @@ export async function generateAdCopy(
       { warnings, rawResponse: response.substring(0, 500) }
     );
   }
+
+  console.log(`✅ Returning: ${headlines.slice(0, headlineCount).length} headlines, ${descriptions.slice(0, descriptionCount).length} descriptions`);
 
   return {
     headlines: headlines.slice(0, headlineCount),

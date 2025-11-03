@@ -1,14 +1,43 @@
 import React, { useState } from 'react';
 import { Copy, Check, RefreshCw, ArrowRight } from 'lucide-react';
 import { CHAR_LIMITS } from '@/utils/constants';
+import type { HeadlineWithCategory, HeadlineCategory } from '@/services/aiService';
 
 export interface AIGenerationResultsProps {
-  headlines: string[];
+  headlines: HeadlineWithCategory[];
   descriptions: string[];
   onUseSelected: (selectedHeadlines: string[], selectedDescriptions: string[]) => void;
   onRegenerate: () => void;
   isRegenerating?: boolean;
 }
+
+// Category badge colors and metadata
+const CATEGORY_STYLES: Record<HeadlineCategory, { bg: string; text: string; label: string; tooltip: string }> = {
+  KEYWORD: {
+    bg: 'bg-blue-100',
+    text: 'text-blue-700',
+    label: 'Keyword',
+    tooltip: 'Position 1: Keyword-focused headline for search relevance'
+  },
+  VALUE: {
+    bg: 'bg-green-100',
+    text: 'text-green-700',
+    label: 'Value',
+    tooltip: 'Position 2: Value proposition and differentiator'
+  },
+  CTA: {
+    bg: 'bg-orange-100',
+    text: 'text-orange-700',
+    label: 'CTA',
+    tooltip: 'Position 3: Call-to-action or brand reinforcement'
+  },
+  GENERAL: {
+    bg: 'bg-gray-100',
+    text: 'text-gray-700',
+    label: 'General',
+    tooltip: 'General headline'
+  }
+};
 
 const AIGenerationResults: React.FC<AIGenerationResultsProps> = ({
   headlines,
@@ -22,12 +51,12 @@ const AIGenerationResults: React.FC<AIGenerationResultsProps> = ({
   const [copiedType, setCopiedType] = useState<'headlines' | 'descriptions' | null>(null);
 
   // Toggle individual headline selection
-  const toggleHeadline = (headline: string) => {
+  const toggleHeadline = (headlineText: string) => {
     const newSelected = new Set(selectedHeadlines);
-    if (newSelected.has(headline)) {
-      newSelected.delete(headline);
+    if (newSelected.has(headlineText)) {
+      newSelected.delete(headlineText);
     } else {
-      newSelected.add(headline);
+      newSelected.add(headlineText);
     }
     setSelectedHeadlines(newSelected);
   };
@@ -45,7 +74,7 @@ const AIGenerationResults: React.FC<AIGenerationResultsProps> = ({
 
   // Select all headlines
   const selectAllHeadlines = () => {
-    setSelectedHeadlines(new Set(headlines));
+    setSelectedHeadlines(new Set(headlines.map(h => h.text)));
   };
 
   // Deselect all headlines
@@ -133,9 +162,10 @@ const AIGenerationResults: React.FC<AIGenerationResultsProps> = ({
 
         <div className="border border-gray-200 rounded-lg divide-y divide-gray-200 max-h-80 overflow-y-auto">
           {headlines.map((headline, index) => {
-            const isSelected = selectedHeadlines.has(headline);
-            const charCount = headline.length;
+            const isSelected = selectedHeadlines.has(headline.text);
+            const charCount = headline.text.length;
             const colorClass = getCharCountColor(charCount, CHAR_LIMITS.HEADLINE);
+            const categoryStyle = CATEGORY_STYLES[headline.category];
 
             return (
               <label
@@ -147,15 +177,26 @@ const AIGenerationResults: React.FC<AIGenerationResultsProps> = ({
                 <input
                   type="checkbox"
                   checked={isSelected}
-                  onChange={() => toggleHeadline(headline)}
+                  onChange={() => toggleHeadline(headline.text)}
                   className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                 />
                 <div className="ml-3 flex-1 min-w-0">
-                  <div className="text-sm text-gray-900 break-words">{headline}</div>
-                  <div className="flex items-center gap-2 mt-1">
+                  <div className="text-sm text-gray-900 break-words">{headline.text}</div>
+                  <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                    {/* Category Badge */}
+                    <span
+                      className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${categoryStyle.bg} ${categoryStyle.text}`}
+                      title={categoryStyle.tooltip}
+                    >
+                      {categoryStyle.label}
+                    </span>
+
+                    {/* Character Count */}
                     <div className={`text-xs font-medium ${colorClass}`}>
                       {charCount}/{CHAR_LIMITS.HEADLINE}
                     </div>
+
+                    {/* Over Limit Warning */}
                     {charCount > CHAR_LIMITS.HEADLINE && (
                       <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
                         Over limit - trim to {CHAR_LIMITS.HEADLINE}

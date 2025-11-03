@@ -57,11 +57,26 @@ export interface GenerateAdCopyRequest {
 }
 
 /**
+ * Headline category for RSA positioning strategy
+ */
+export type HeadlineCategory = 'KEYWORD' | 'VALUE' | 'CTA' | 'GENERAL';
+
+/**
+ * Headline with category metadata
+ */
+export interface HeadlineWithCategory {
+  /** Headline text */
+  text: string;
+  /** Category for positioning strategy */
+  category: HeadlineCategory;
+}
+
+/**
  * Generated ad copy response
  */
 export interface GeneratedAdCopy {
-  /** Generated headlines (max 30 characters each) */
-  headlines: string[];
+  /** Generated headlines with categories */
+  headlines: HeadlineWithCategory[];
 
   /** Generated descriptions (max 90 characters each) */
   descriptions: string[];
@@ -420,7 +435,7 @@ export async function generateAdCopy(
       descriptions: response.descriptions?.length || 0
     });
 
-    const validHeadlines = (response.headlines || []).filter((h) => validateHeadline(h));
+    const validHeadlines = (response.headlines || []).filter((h) => validateHeadline(h.text));
     const validDescriptions = (response.descriptions || []).filter((d) => validateDescription(d));
 
     console.log('✅ After validation:', {
