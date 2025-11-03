@@ -152,8 +152,15 @@ const AIGenerationResults: React.FC<AIGenerationResultsProps> = ({
                 />
                 <div className="ml-3 flex-1 min-w-0">
                   <div className="text-sm text-gray-900 break-words">{headline}</div>
-                  <div className={`text-xs font-medium mt-1 ${colorClass}`}>
-                    {charCount}/{CHAR_LIMITS.HEADLINE}
+                  <div className="flex items-center gap-2 mt-1">
+                    <div className={`text-xs font-medium ${colorClass}`}>
+                      {charCount}/{CHAR_LIMITS.HEADLINE}
+                    </div>
+                    {charCount > CHAR_LIMITS.HEADLINE && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
+                        Over limit - trim to {CHAR_LIMITS.HEADLINE}
+                      </span>
+                    )}
                   </div>
                 </div>
               </label>
@@ -220,8 +227,15 @@ const AIGenerationResults: React.FC<AIGenerationResultsProps> = ({
                 />
                 <div className="ml-3 flex-1 min-w-0">
                   <div className="text-sm text-gray-900 break-words">{description}</div>
-                  <div className={`text-xs font-medium mt-1 ${colorClass}`}>
-                    {charCount}/{CHAR_LIMITS.DESCRIPTION}
+                  <div className="flex items-center gap-2 mt-1">
+                    <div className={`text-xs font-medium ${colorClass}`}>
+                      {charCount}/{CHAR_LIMITS.DESCRIPTION}
+                    </div>
+                    {charCount > CHAR_LIMITS.DESCRIPTION && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
+                        Over limit - trim to {CHAR_LIMITS.DESCRIPTION}
+                      </span>
+                    )}
                   </div>
                 </div>
               </label>

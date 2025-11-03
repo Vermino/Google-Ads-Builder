@@ -1,32 +1,15 @@
 /**
- * AI Service for Google Ads Copy Generation (Server-Side)
- *
- * Provides AI-powered headline and description generation using OpenAI GPT-4 or Claude.
- * This is the secure server-side version that keeps API keys safe.
- *
- * @module aiService
+ * AI Service - Multi-Provider Support (Claude & Gemini)
+ * Supports both Claude and Google Gemini for ad copy generation
  */
 
-import OpenAI from 'openai';
-import Anthropic from '@anthropic-ai/sdk';
-import { config, isProviderConfigured } from '../config/config.js';
-import type {
-  AIProvider,
-  GenerateAdCopyRequest,
-  GeneratedAdCopy,
-  AIErrorCode,
-} from '../types/index.js';
+import { config } from '../config/config';
 
-/* ==================== CUSTOM ERROR CLASS ==================== */
-
-/**
- * Custom error class for AI service errors
- */
 export class AIServiceError extends Error {
-  code: AIErrorCode;
+  code: string;
   details?: any;
 
-  constructor(code: AIErrorCode, message: string, details?: any) {
+  constructor(code: string, message: string, details?: any) {
     super(message);
     this.name = 'AIServiceError';
     this.code = code;
@@ -34,442 +17,388 @@ export class AIServiceError extends Error {
   }
 }
 
-/* ==================== AI CLIENT INITIALIZATION ==================== */
+export type AIProvider = 'claude' | 'gemini';
 
-let openaiClient: OpenAI | null = null;
-let claudeClient: Anthropic | null = null;
+interface GenerateAdCopyRequest {
+  businessDescription: string;
+  targetKeywords?: string[];
+  tone?: string;
+  callToAction?: string;
+  uniqueSellingPoints?: string[];
+  targetAudience?: string;
+  headlineCount?: number;
+  descriptionCount?: number;
+}
+
+interface GeneratedAdCopy {
+  headlines: string[];
+  descriptions: string[];
+  generatedAt: string;
+}
 
 /**
- * Initialize OpenAI client (server-side, secure)
+ * Call Claude API using official API key
  */
-function getOpenAIClient(): OpenAI {
-  if (!openaiClient && config.openaiApiKey) {
-    openaiClient = new OpenAI({
-      apiKey: config.openaiApiKey,
-      // NO dangerouslyAllowBrowser - this is server-side!
-    });
+async function callClaudeAPI(prompt: string): Promise<string> {
+  if (!config.claudeApiKey) {
+    throw new AIServiceError('NO_API_KEY', 'Claude API key not configured');
   }
 
-  if (!openaiClient) {
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': config.claudeApiKey,
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify({
+      model: 'claude-3-5-sonnet-20241022',
+      max_tokens: 4096,
+      messages: [
+        {
+          role: 'user',
+          content: prompt,
+        },
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
     throw new AIServiceError(
-      'PROVIDER_NOT_CONFIGURED',
-      'OpenAI API key is not configured on the server'
+      'CLAUDE_API_ERROR',
+      `Claude API error: ${response.status}`,
+      { responseText: error }
     );
   }
 
-  return openaiClient;
+  const data = await response.json();
+  return data.content[0].text;
 }
 
 /**
- * Initialize Claude client (server-side, secure)
+ * Call Google Gemini API
  */
-function getClaudeClient(): Anthropic {
-  if (!claudeClient && config.anthropicApiKey) {
-    claudeClient = new Anthropic({
-      apiKey: config.anthropicApiKey,
-      // NO dangerouslyAllowBrowser - this is server-side!
-    });
+async function callGeminiAPI(prompt: string): Promise<string> {
+  if (!config.geminiApiKey) {
+    throw new AIServiceError('NO_API_KEY', 'Gemini API key not configured');
   }
 
-  if (!claudeClient) {
-    throw new AIServiceError(
-      'PROVIDER_NOT_CONFIGURED',
-      'Claude API key is not configured on the server'
-    );
-  }
-
-  return claudeClient;
-}
-
-/* ==================== PROMPT TEMPLATES ==================== */
-
-/**
- * Generate prompt for headline creation
- */
-function buildHeadlinePrompt(request: GenerateAdCopyRequest): string {
-  const count = request.headlineCount || 15;
-  const keywords = request.targetKeywords?.join(', ') || 'N/A';
-  const tone = request.tone || 'professional';
-  const audience = request.targetAudience || 'general audience';
-
-  return `Generate ${count} unique Google Ads headlines for the following business:
-
-Business: ${request.businessDescription}
-Keywords: ${keywords}
-Tone: ${tone}
-Target Audience: ${audience}
-
-Requirements:
-- Each headline must be EXACTLY 30 characters or less (including spaces)
-- Include power words and action verbs
-- Incorporate keywords naturally where possible
-- Be compelling and click-worthy
-- No superlatives without proof (e.g., "best", "cheapest")
-- No trademark or copyright violations
-- Follow Google Ads editorial guidelines
-- No prohibited characters: < > { } [ ] \\
-- Maximum 2 exclamation marks per headline
-- Output ONLY the headlines, one per line
-- Number each headline (1-${count})
-
-Headlines:`;
-}
-
-/**
- * Generate prompt for description creation
- */
-function buildDescriptionPrompt(request: GenerateAdCopyRequest): string {
-  const count = request.descriptionCount || 4;
-  const keywords = request.targetKeywords?.join(', ') || 'N/A';
-  const usps = request.uniqueSellingPoints?.join(', ') || 'N/A';
-  const cta = request.callToAction || 'Learn More';
-  const tone = request.tone || 'professional';
-
-  return `Generate ${count} unique Google Ads descriptions for the following business:
-
-Business: ${request.businessDescription}
-Keywords: ${keywords}
-Unique Selling Points: ${usps}
-Call to Action: ${cta}
-Tone: ${tone}
-
-Requirements:
-- Each description must be EXACTLY 90 characters or less (including spaces)
-- Include a clear call-to-action
-- Highlight unique selling points
-- Be specific and valuable
-- No superlatives without proof
-- Follow Google Ads editorial guidelines
-- No prohibited characters: < > { } [ ] \\
-- Output ONLY the descriptions, one per line
-- Number each description (1-${count})
-
-Descriptions:`;
-}
-
-/* ==================== AI API CALLS ==================== */
-
-/**
- * Call OpenAI API
- */
-async function callOpenAI(prompt: string): Promise<string> {
-  const client = getOpenAIClient();
-
-  try {
-    const response = await Promise.race([
-      client.chat.completions.create({
-        model: config.openaiModel,
-        messages: [{ role: 'user', content: prompt }],
-        max_tokens: config.maxTokens,
-        temperature: config.temperature,
+  // Gemini uses a different API structure
+  // Use gemini-2.5-flash - fast and free with generous limits
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${config.geminiApiKey}`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [
+              {
+                text: prompt,
+              },
+            ],
+          },
+        ],
+        generationConfig: {
+          temperature: 0.9,
+          maxOutputTokens: 4096,
+        },
       }),
-      new Promise<never>((_, reject) =>
-        setTimeout(
-          () => reject(new Error('Request timeout')),
-          config.apiTimeoutMs
-        )
-      ),
-    ]);
-
-    return response.choices[0]?.message?.content || '';
-  } catch (error: any) {
-    if (error.message === 'Request timeout') {
-      throw new AIServiceError('TIMEOUT', 'OpenAI request timed out', error);
     }
-
-    if (error.status === 401) {
-      throw new AIServiceError('AUTH_ERROR', 'Invalid OpenAI API key', error);
-    } else if (error.status === 429) {
-      throw new AIServiceError('RATE_LIMIT', 'OpenAI rate limit exceeded', error);
-    } else if (error.status === 500 || error.status === 503) {
-      throw new AIServiceError('API_ERROR', 'OpenAI service error', error);
-    } else {
-      throw new AIServiceError('UNKNOWN_ERROR', 'OpenAI error occurred', error);
-    }
-  }
-}
-
-/**
- * Call Claude API
- */
-async function callClaude(prompt: string): Promise<string> {
-  const client = getClaudeClient();
-
-  try {
-    const response = await Promise.race([
-      client.messages.create({
-        model: config.claudeModel,
-        max_tokens: config.maxTokens,
-        messages: [{ role: 'user', content: prompt }],
-      }),
-      new Promise<never>((_, reject) =>
-        setTimeout(
-          () => reject(new Error('Request timeout')),
-          config.apiTimeoutMs
-        )
-      ),
-    ]);
-
-    const textContent = response.content.find((block) => block.type === 'text');
-    return textContent && 'text' in textContent ? textContent.text : '';
-  } catch (error: any) {
-    if (error.message === 'Request timeout') {
-      throw new AIServiceError('TIMEOUT', 'Claude request timed out', error);
-    }
-
-    if (error.status === 401) {
-      throw new AIServiceError('AUTH_ERROR', 'Invalid Claude API key', error);
-    } else if (error.status === 429) {
-      throw new AIServiceError('RATE_LIMIT', 'Claude rate limit exceeded', error);
-    } else if (error.status === 500 || error.status === 503) {
-      throw new AIServiceError('API_ERROR', 'Claude service error', error);
-    } else {
-      throw new AIServiceError('UNKNOWN_ERROR', 'Claude error occurred', error);
-    }
-  }
-}
-
-/* ==================== RESPONSE PARSING ==================== */
-
-/**
- * Parse and validate headlines from AI response
- */
-function parseHeadlines(response: string): string[] {
-  const lines = response.split('\n').filter((line) => line.trim());
-
-  const headlines = lines
-    .map((line) => line.replace(/^\d+\.\s*/, '').trim()) // Remove numbering
-    .filter((line) => line.length > 0)
-    .map((line) => {
-      // Remove markdown formatting
-      line = line.replace(/\*\*/g, '').replace(/\*/g, '');
-      // Remove quotes if present
-      line = line.replace(/^["']|["']$/g, '');
-      return line.trim();
-    })
-    .filter((line) => validateHeadline(line));
-
-  return headlines;
-}
-
-/**
- * Parse and validate descriptions from AI response
- */
-function parseDescriptions(response: string): string[] {
-  const lines = response.split('\n').filter((line) => line.trim());
-
-  const descriptions = lines
-    .map((line) => line.replace(/^\d+\.\s*/, '').trim()) // Remove numbering
-    .filter((line) => line.length > 0)
-    .map((line) => {
-      // Remove markdown formatting
-      line = line.replace(/\*\*/g, '').replace(/\*/g, '');
-      // Remove quotes if present
-      line = line.replace(/^["']|["']$/g, '');
-      return line.trim();
-    })
-    .filter((line) => validateDescription(line));
-
-  return descriptions;
-}
-
-/* ==================== VALIDATION ==================== */
-
-const PROHIBITED_CHARS = /[<>{}[\]\\]/;
-const MAX_EXCLAMATION_MARKS = 2;
-const MAX_QUESTION_MARKS = 2;
-const MAX_HEADLINE_LENGTH = 30;
-const MAX_DESCRIPTION_LENGTH = 90;
-
-/**
- * Validate headline compliance with Google Ads policies
- */
-export function validateHeadline(headline: string): boolean {
-  // Length check
-  if (headline.length === 0 || headline.length > MAX_HEADLINE_LENGTH) {
-    return false;
-  }
-
-  // Prohibited characters check
-  if (PROHIBITED_CHARS.test(headline)) {
-    return false;
-  }
-
-  // Excessive punctuation check
-  const exclamationCount = (headline.match(/!/g) || []).length;
-  const questionCount = (headline.match(/\?/g) || []).length;
-
-  if (exclamationCount > MAX_EXCLAMATION_MARKS) {
-    return false;
-  }
-
-  if (questionCount > MAX_QUESTION_MARKS) {
-    return false;
-  }
-
-  // Check for excessive capitalization (all caps)
-  const words = headline.split(' ');
-  const allCapsWords = words.filter(
-    (word) => word.length > 1 && word === word.toUpperCase() && /[A-Z]/.test(word)
   );
-  if (allCapsWords.length > words.length / 2) {
-    return false;
+
+  if (!response.ok) {
+    const error = await response.text();
+    console.error('[Gemini API Error]', {
+      status: response.status,
+      statusText: response.statusText,
+      error: error,
+    });
+    throw new AIServiceError(
+      'GEMINI_API_ERROR',
+      `Gemini API error: ${response.status}`,
+      { responseText: error }
+    );
   }
 
-  return true;
+  const data = await response.json();
+
+  // Gemini response structure is different
+  if (!data.candidates || data.candidates.length === 0) {
+    throw new AIServiceError(
+      'GEMINI_NO_RESPONSE',
+      'Gemini returned no candidates',
+      { response: data }
+    );
+  }
+
+  return data.candidates[0].content.parts[0].text;
 }
 
 /**
- * Validate description compliance with Google Ads policies
+ * Build structured prompt for Google Ads copy generation
  */
-export function validateDescription(description: string): boolean {
-  // Length check
-  if (description.length === 0 || description.length > MAX_DESCRIPTION_LENGTH) {
-    return false;
-  }
+function buildAdCopyPrompt(request: GenerateAdCopyRequest): string {
+  const {
+    businessDescription,
+    targetKeywords = [],
+    tone = 'professional',
+    callToAction = '',
+    uniqueSellingPoints = [],
+    targetAudience = '',
+    headlineCount = 15,
+    descriptionCount = 4,
+  } = request;
 
-  // Prohibited characters check
-  if (PROHIBITED_CHARS.test(description)) {
-    return false;
-  }
+  const keywordsText = targetKeywords.length > 0 ? targetKeywords.join(', ') : 'None provided';
+  const uspsText = uniqueSellingPoints.length > 0 ? uniqueSellingPoints.join('\n  • ') : 'None provided';
+  const audienceText = targetAudience || 'General audience';
+  const ctaText = callToAction || 'None specified';
 
-  // Excessive punctuation check
-  const exclamationCount = (description.match(/!/g) || []).length;
-  const questionCount = (description.match(/\?/g) || []).length;
+  return `You are an expert Google Ads copywriter. Generate compelling, conversion-focused ad copy that strictly adheres to Google Ads policies and character limits.
 
-  if (exclamationCount > MAX_EXCLAMATION_MARKS) {
-    return false;
-  }
+## BUSINESS CONTEXT
+Business Description: ${businessDescription}
+Target Keywords: ${keywordsText}
+Target Audience: ${audienceText}
+Desired Tone: ${tone}
+Call-to-Action: ${ctaText}
+Unique Selling Points:
+  • ${uspsText}
 
-  if (questionCount > MAX_QUESTION_MARKS) {
-    return false;
-  }
+## TASK
+Generate ${headlineCount} unique headlines and ${descriptionCount} unique descriptions for Google Ads Responsive Search Ads.
 
-  return true;
+## STRICT CHARACTER LIMITS - EXTREMELY IMPORTANT!
+⚠️⚠️⚠️ CRITICAL - DO NOT EXCEED THESE LIMITS ⚠️⚠️⚠️
+
+HEADLINES: Must be 30 characters or LESS (including spaces and punctuation)
+DESCRIPTIONS: Must be 90 characters or LESS (including spaces and punctuation)
+
+Count every character carefully! If a description is 91+ characters, it WILL BE REJECTED.
+Keep descriptions SHORT and CONCISE. Aim for 70-85 characters to be safe.
+
+## GOOGLE ADS EDITORIAL GUIDELINES
+Your copy MUST follow these rules:
+1. ✅ Use proper grammar, spelling, and punctuation
+2. ✅ Be clear, specific, and relevant to the business
+3. ✅ Include keywords naturally when possible
+4. ✅ Use action-oriented language
+5. ✅ Highlight unique value propositions
+6. ❌ NO excessive punctuation (!!!, ???, etc.)
+7. ❌ NO all caps words (except acronyms like "USA")
+8. ❌ NO superlatives without proof ("best", "cheapest")
+9. ❌ NO misleading claims or clickbait
+10. ❌ NO inappropriate spacing or symbols
+
+## BEST PRACTICES
+- Vary your headlines for different angles (features, benefits, urgency, social proof)
+- Include at least 3 headlines with target keywords
+- Use numbers and specifics when possible ("24/7 Support", "Save 30%")
+- Create urgency when appropriate ("Limited Time", "Today Only")
+- Include the call-to-action in at least 2 headlines
+- Make descriptions SHORT, informative and action-oriented (70-85 chars is ideal)
+- Front-load important information
+- Use abbreviations if needed to stay under limits (& instead of and, etc.)
+
+## OUTPUT FORMAT
+You MUST format your response EXACTLY as shown below. Do not include any other text, explanations, or commentary.
+
+HEADLINES:
+1. [Headline text here] (XX chars)
+2. [Headline text here] (XX chars)
+3. [Headline text here] (XX chars)
+[Continue for all ${headlineCount} headlines]
+
+DESCRIPTIONS:
+1. [Description text here] (XX chars)
+2. [Description text here] (XX chars)
+[Continue for all ${descriptionCount} descriptions]
+
+Now generate the ad copy following ALL requirements above.`;
 }
 
-/* ==================== MAIN SERVICE FUNCTIONS ==================== */
-
 /**
- * Generate headlines using AI
+ * Parse AI response into headlines and descriptions with validation
  */
-export async function generateHeadlines(
-  request: GenerateAdCopyRequest
-): Promise<string[]> {
-  // Validate provider is configured
-  if (!isProviderConfigured(request.provider)) {
-    throw new AIServiceError(
-      'PROVIDER_NOT_CONFIGURED',
-      `${request.provider} is not configured on the server. Contact administrator.`
-    );
+function parseAdCopyResponse(
+  response: string,
+  expectedHeadlines: number,
+  expectedDescriptions: number
+): { headlines: string[]; descriptions: string[]; warnings: string[] } {
+  const headlines: string[] = [];
+  const descriptions: string[] = [];
+  const warnings: string[] = [];
+
+  const lines = response.split('\n');
+  let section: 'headlines' | 'descriptions' | '' = '';
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+
+    // Detect section headers
+    if (trimmed.match(/^HEADLINES:$/i)) {
+      section = 'headlines';
+      continue;
+    } else if (trimmed.match(/^DESCRIPTIONS:$/i)) {
+      section = 'descriptions';
+      continue;
+    }
+
+    // Match numbered lines: "1. Text here (30 chars)" or "1. Text here"
+    const match = trimmed.match(/^\d+\.\s*(.+?)(?:\s*\(\d+\s*chars?\))?$/i);
+    if (!match) continue;
+
+    let text = match[1].trim();
+
+    // Remove any character count notation that might be in the text
+    text = text.replace(/\s*\(\d+\s*chars?\)\s*$/i, '').trim();
+
+    // Validate and add to appropriate section
+    if (section === 'headlines') {
+      if (text.length === 0) {
+        warnings.push(`Empty headline at line: "${trimmed}"`);
+      } else if (text.length > 30) {
+        // Try to truncate if slightly too long (up to 35 chars)
+        if (text.length <= 35) {
+          const originalLength = text.length;
+          const truncated = text.substring(0, 30).trim();
+          // Try to end at word boundary
+          const lastSpace = truncated.lastIndexOf(' ');
+          if (lastSpace > 20) {
+            text = truncated.substring(0, lastSpace);
+          } else {
+            text = truncated;
+          }
+          warnings.push(`Headline auto-truncated from ${originalLength} to ${text.length} chars`);
+          headlines.push(text);
+        } else {
+          warnings.push(`Headline too long (${text.length} chars): "${text.substring(0, 40)}..."`);
+        }
+      } else {
+        headlines.push(text);
+      }
+    } else if (section === 'descriptions') {
+      if (text.length === 0) {
+        warnings.push(`Empty description at line: "${trimmed}"`);
+      } else if (text.length > 90) {
+        // Try to truncate if slightly too long (up to 110 chars)
+        if (text.length <= 110) {
+          const originalLength = text.length;
+          const truncated = text.substring(0, 90).trim();
+          // Try to end at word boundary
+          const lastSpace = truncated.lastIndexOf(' ');
+          if (lastSpace > 75) {
+            text = truncated.substring(0, lastSpace);
+          } else {
+            text = truncated;
+          }
+          warnings.push(`Description auto-truncated from ${originalLength} to ${text.length} chars`);
+          descriptions.push(text);
+        } else {
+          warnings.push(`Description too long (${text.length} chars, cannot truncate): "${text.substring(0, 50)}..."`);
+        }
+      } else {
+        descriptions.push(text);
+      }
+    }
   }
 
-  // Build prompt
-  const prompt = buildHeadlinePrompt(request);
-
-  // Call AI provider
-  let response: string;
-  if (request.provider === 'openai') {
-    response = await callOpenAI(prompt);
-  } else {
-    response = await callClaude(prompt);
+  // Check if we got the expected counts
+  if (headlines.length < expectedHeadlines) {
+    warnings.push(`Expected ${expectedHeadlines} headlines but got ${headlines.length}`);
+  }
+  if (descriptions.length < expectedDescriptions) {
+    warnings.push(`Expected ${expectedDescriptions} descriptions but got ${descriptions.length}`);
   }
 
-  // Parse and validate response
-  const headlines = parseHeadlines(response);
-
-  if (headlines.length === 0) {
-    throw new AIServiceError(
-      'INVALID_RESPONSE',
-      'No valid headlines generated. Please try again.'
-    );
-  }
-
-  return headlines;
+  return { headlines, descriptions, warnings };
 }
 
 /**
- * Generate descriptions using AI
- */
-export async function generateDescriptions(
-  request: GenerateAdCopyRequest
-): Promise<string[]> {
-  // Validate provider is configured
-  if (!isProviderConfigured(request.provider)) {
-    throw new AIServiceError(
-      'PROVIDER_NOT_CONFIGURED',
-      `${request.provider} is not configured on the server. Contact administrator.`
-    );
-  }
-
-  // Build prompt
-  const prompt = buildDescriptionPrompt(request);
-
-  // Call AI provider
-  let response: string;
-  if (request.provider === 'openai') {
-    response = await callOpenAI(prompt);
-  } else {
-    response = await callClaude(prompt);
-  }
-
-  // Parse and validate response
-  const descriptions = parseDescriptions(response);
-
-  if (descriptions.length === 0) {
-    throw new AIServiceError(
-      'INVALID_RESPONSE',
-      'No valid descriptions generated. Please try again.'
-    );
-  }
-
-  return descriptions;
-}
-
-/**
- * Generate complete ad copy (headlines + descriptions)
- *
- * Main entry point for ad copy generation
+ * Generate ad copy using specified AI provider
  */
 export async function generateAdCopy(
-  request: GenerateAdCopyRequest
+  request: GenerateAdCopyRequest,
+  provider: AIProvider = 'gemini'
 ): Promise<GeneratedAdCopy> {
-  // Generate headlines and descriptions in parallel
-  const [headlines, descriptions] = await Promise.all([
-    generateHeadlines(request),
-    generateDescriptions(request),
-  ]);
+  const {
+    headlineCount = 15,
+    descriptionCount = 4,
+  } = request;
+
+  // Build structured prompt
+  const prompt = buildAdCopyPrompt(request);
+
+  // Call appropriate AI provider
+  let response: string;
+  if (provider === 'claude') {
+    response = await callClaudeAPI(prompt);
+  } else if (provider === 'gemini') {
+    response = await callGeminiAPI(prompt);
+  } else {
+    throw new AIServiceError('INVALID_PROVIDER', `Unknown provider: ${provider}`);
+  }
+
+  // Parse and validate response
+  const { headlines, descriptions, warnings } = parseAdCopyResponse(
+    response,
+    headlineCount,
+    descriptionCount
+  );
+
+  // Log warnings if any
+  if (warnings.length > 0) {
+    console.warn(`⚠️  Ad copy generation warnings (${provider}):`);
+    warnings.forEach(w => console.warn(`   - ${w}`));
+  }
+
+  // Throw error if we didn't get enough content
+  // Accept results with at least 3 headlines and 2 descriptions (more lenient for Gemini)
+  if (headlines.length < 3 || descriptions.length < 2) {
+    throw new AIServiceError(
+      'PARSE_ERROR',
+      `Not enough valid ad copy generated. Got ${headlines.length} headlines and ${descriptions.length} descriptions. Need at least 3 headlines and 2 descriptions.`,
+      { warnings, rawResponse: response.substring(0, 500) }
+    );
+  }
 
   return {
-    headlines,
-    descriptions,
+    headlines: headlines.slice(0, headlineCount),
+    descriptions: descriptions.slice(0, descriptionCount),
     generatedAt: new Date().toISOString(),
-    provider: request.provider,
   };
-}
-
-/* ==================== UTILITY FUNCTIONS ==================== */
-
-/**
- * Check if any AI provider is configured
- */
-export function isAIServiceAvailable(): boolean {
-  return isProviderConfigured('openai') || isProviderConfigured('claude');
 }
 
 /**
  * Get available AI providers
  */
-export function getAvailableProviders(): AIProvider[] {
+export async function getAvailableProviders(): Promise<AIProvider[]> {
   const providers: AIProvider[] = [];
 
-  if (isProviderConfigured('openai')) {
-    providers.push('openai');
-  }
-
-  if (isProviderConfigured('claude')) {
+  if (config.claudeApiKey) {
     providers.push('claude');
   }
 
+  if (config.geminiApiKey) {
+    providers.push('gemini');
+  }
+
   return providers;
+}
+
+/**
+ * Check if a specific provider is available
+ */
+export async function isProviderAvailable(provider: AIProvider): Promise<boolean> {
+  if (provider === 'claude') {
+    return !!config.claudeApiKey;
+  } else if (provider === 'gemini') {
+    return !!config.geminiApiKey;
+  }
+  return false;
 }
