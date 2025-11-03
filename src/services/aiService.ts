@@ -17,7 +17,7 @@ import { apiClient, isAPIConfigured } from './apiClient';
 /**
  * Supported AI providers
  */
-export type AIProvider = 'openai' | 'claude';
+export type AIProvider = 'openai' | 'claude' | 'gemini';
 
 /**
  * Tone options for generated ad copy
@@ -135,8 +135,8 @@ const MAX_QUESTION_MARKS = 2;
  * @returns true if valid, false otherwise
  */
 export function validateHeadline(headline: string): boolean {
-  // Length check
-  if (headline.length === 0 || headline.length > MAX_HEADLINE_LENGTH) {
+  // Allow any length for manual review - user will see warnings in UI
+  if (headline.length === 0) {
     return false;
   }
 
@@ -175,11 +175,8 @@ export function validateHeadline(headline: string): boolean {
  * @returns true if valid, false otherwise
  */
 export function validateDescription(description: string): boolean {
-  // Length check
-  if (
-    description.length === 0 ||
-    description.length > MAX_DESCRIPTION_LENGTH
-  ) {
+  // Allow any length for manual review - user will see warnings in UI
+  if (description.length === 0) {
     return false;
   }
 
@@ -515,7 +512,7 @@ export async function getAvailableProviders(): Promise<AIProvider[]> {
   try {
     const result = await apiClient.getProviders();
     return result.providers.filter(
-      (p): p is AIProvider => p === 'openai' || p === 'claude'
+      (p): p is AIProvider => p === 'openai' || p === 'claude' || p === 'gemini'
     );
   } catch {
     return [];
