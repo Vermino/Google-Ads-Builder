@@ -5,7 +5,12 @@
 
 import Database from 'better-sqlite3';
 import { readFileSync } from 'fs';
-import { join } from 'path';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+// ES module compatible __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // Database instance (singleton)
 let db: Database.Database | null = null;

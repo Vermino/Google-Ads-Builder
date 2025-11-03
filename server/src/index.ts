@@ -12,11 +12,14 @@ import adGroupRoutes from './routes/adGroup.routes';
 import adRoutes from './routes/ad.routes';
 import { getAvailableProviders } from './services/aiService';
 import { initDatabase } from './db/database';
-import { join } from 'path';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 
 const app = express();
 
-// Initialize SQLite database
+// Initialize SQLite database (ES module compatible)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 const dbPath = join(__dirname, '../data/campaigns.db');
 initDatabase(dbPath);
 
