@@ -166,10 +166,11 @@ class APIClient {
    * @returns Generated ad copy
    */
   async generateAdCopy(request: GenerateAdCopyRequest): Promise<GenerateAdCopyResponse> {
-    return this.request<GenerateAdCopyResponse>('/api/ai/generate-copy', {
+    const response = await this.request<{ success: boolean; data: GenerateAdCopyResponse }>('/api/ai/generate-copy', {
       method: 'POST',
       body: JSON.stringify(request),
     });
+    return response.data;
   }
 
   /**
@@ -177,7 +178,8 @@ class APIClient {
    * @returns List of available providers
    */
   async getProviders(): Promise<ProvidersResponse> {
-    return this.request<ProvidersResponse>('/api/ai/providers');
+    const response = await this.request<{ success: boolean; data: ProvidersResponse }>('/api/ai/providers');
+    return response.data;
   }
 
   /* ==================== KEYWORD RESEARCH ENDPOINTS ==================== */
@@ -188,10 +190,11 @@ class APIClient {
    * @returns Keyword research results
    */
   async researchKeywords(request: KeywordResearchRequest): Promise<KeywordResearchResponse> {
-    return this.request<KeywordResearchResponse>('/api/keywords/research', {
+    const response = await this.request<{ success: boolean; data: KeywordResearchResponse }>('/api/keywords/research', {
       method: 'POST',
       body: JSON.stringify(request),
     });
+    return response.data;
   }
 
   /**
@@ -200,10 +203,11 @@ class APIClient {
    * @returns Expanded keywords
    */
   async expandKeywords(request: KeywordExpansionRequest): Promise<KeywordExpansionResponse> {
-    return this.request<KeywordExpansionResponse>('/api/keywords/expand', {
+    const response = await this.request<{ success: boolean; data: KeywordExpansionResponse }>('/api/keywords/expand', {
       method: 'POST',
       body: JSON.stringify(request),
     });
+    return response.data;
   }
 
   /* ==================== HEALTH CHECK ==================== */
@@ -214,6 +218,18 @@ class APIClient {
    */
   async checkHealth(): Promise<HealthCheckResponse> {
     return this.request<HealthCheckResponse>('/health');
+  }
+
+  /* ==================== OAUTH ENDPOINTS ==================== */
+
+  /**
+   * Disconnect Claude token
+   * @returns Success response
+   */
+  async disconnectClaude(): Promise<{ success: boolean; message: string }> {
+    return this.request<{ success: boolean; message: string }>('/api/oauth/disconnect', {
+      method: 'DELETE',
+    });
   }
 }
 
