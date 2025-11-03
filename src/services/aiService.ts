@@ -415,8 +415,20 @@ export async function generateAdCopy(
     });
 
     // Validate results
+    console.log('🔍 Backend response:', {
+      headlines: response.headlines?.length || 0,
+      descriptions: response.descriptions?.length || 0
+    });
+
     const validHeadlines = (response.headlines || []).filter((h) => validateHeadline(h));
     const validDescriptions = (response.descriptions || []).filter((d) => validateDescription(d));
+
+    console.log('✅ After validation:', {
+      validHeadlines: validHeadlines.length,
+      validDescriptions: validDescriptions.length,
+      headlines: validHeadlines,
+      descriptions: validDescriptions
+    });
 
     if (validHeadlines.length === 0 && validDescriptions.length === 0) {
       throw new AIServiceError(
