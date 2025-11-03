@@ -285,25 +285,14 @@ function parseAdCopyResponse(
     } else if (section === 'descriptions') {
       if (text.length === 0) {
         warnings.push(`Empty description at line: "${trimmed}"`);
-      } else if (text.length > 90) {
-        // Try to truncate if slightly too long (up to 110 chars)
-        if (text.length <= 110) {
-          const originalLength = text.length;
-          const truncated = text.substring(0, 90).trim();
-          // Try to end at word boundary
-          const lastSpace = truncated.lastIndexOf(' ');
-          if (lastSpace > 75) {
-            text = truncated.substring(0, lastSpace);
-          } else {
-            text = truncated;
-          }
-          warnings.push(`Description auto-truncated from ${originalLength} to ${text.length} chars`);
-          descriptions.push(text);
-        } else {
-          warnings.push(`Description too long (${text.length} chars, cannot truncate): "${text.substring(0, 50)}..."`);
-        }
       } else {
+        // Accept ALL lengths for manual review
         descriptions.push(text);
+
+        // Add warning if over limit, but still include it
+        if (text.length > 90) {
+          warnings.push(`⚠️ Description over limit (${text.length} chars): "${text.substring(0, 50)}..." - Review and adjust manually`);
+        }
       }
     }
   }
