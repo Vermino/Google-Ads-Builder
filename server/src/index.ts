@@ -7,6 +7,9 @@ import { apiLimiter } from './middleware/rateLimiter';
 import aiRoutes from './routes/ai.routes';
 import keywordsRoutes from './routes/keywords.routes';
 import claudeRoutes from './routes/claude.routes';
+import campaignRoutes from './routes/campaign.routes';
+import adGroupRoutes from './routes/adGroup.routes';
+import adRoutes from './routes/ad.routes';
 import { getAvailableProviders } from './services/aiService';
 import { initDatabase } from './db/database';
 import { join } from 'path';
@@ -40,6 +43,9 @@ app.use('/api', apiLimiter);
 app.use('/api/ai', aiRoutes);
 app.use('/api/keywords', keywordsRoutes);
 app.use('/api/claude', claudeRoutes);
+app.use('/api/campaigns', campaignRoutes);
+app.use('/api/ad-groups', adGroupRoutes);
+app.use('/api/ads', adRoutes);
 
 // Error handling
 app.use(errorHandler);
