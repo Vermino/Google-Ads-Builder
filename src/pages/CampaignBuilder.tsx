@@ -21,6 +21,8 @@ const CampaignBuilder = () => {
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
 
   const campaign = useCampaignStore((state) => state.getCampaign(campaignId!));
+  const loadCampaigns = useCampaignStore((state) => state.loadCampaigns);
+  const loading = useCampaignStore((state) => state.loading);
   const updateCampaign = useCampaignStore((state) => state.updateCampaign);
   const updateGlobalDescription = useCampaignStore((state) => state.updateGlobalDescription);
 
@@ -30,6 +32,24 @@ const CampaignBuilder = () => {
   const updateAdGroupsStatus = useCampaignStore((state) => state.updateAdGroupsStatus);
 
   const toast = useToast();
+
+  // Load campaigns from backend on mount if not already loaded
+  useEffect(() => {
+    if (!campaign) {
+      loadCampaigns();
+    }
+  }, [campaign, loadCampaigns]);
+
+  if (loading && !campaign) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <p className="mt-2 text-gray-600">Loading campaign...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!campaign) {
     return (

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Settings } from 'lucide-react';
 import { useCampaignStore } from '@/stores/useCampaignStore';
@@ -12,10 +12,17 @@ import type { ExportOptions } from '@/utils/csvExport';
 
 const Dashboard = () => {
   const campaigns = useCampaignStore((state) => state.campaigns);
+  const loadCampaigns = useCampaignStore((state) => state.loadCampaigns);
+  const loading = useCampaignStore((state) => state.loading);
   const navigate = useNavigate();
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isNewCampaignModalOpen, setIsNewCampaignModalOpen] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  // Load campaigns from backend on mount
+  useEffect(() => {
+    loadCampaigns();
+  }, [loadCampaigns]);
 
   const handleCampaignClick = (campaignId: string) => {
     navigate(`/campaigns/${campaignId}`);
@@ -95,7 +102,16 @@ const Dashboard = () => {
           <p className="text-gray-600">Manage your Google Ads campaigns with AI-powered copy generation</p>
         </div>
 
-        <CampaignList campaigns={campaigns} onCampaignClick={handleCampaignClick} />
+        {loading && campaigns.length === 0 ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <p className="mt-2 text-gray-600">Loading campaigns...</p>
+            </div>
+          </div>
+        ) : (
+          <CampaignList campaigns={campaigns} onCampaignClick={handleCampaignClick} />
+        )}
       </main>
 
       {/* New Campaign Modal */}
