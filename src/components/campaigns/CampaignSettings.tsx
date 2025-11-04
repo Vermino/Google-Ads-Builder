@@ -52,6 +52,30 @@ const CampaignSettings: React.FC<CampaignSettingsProps> = ({ campaign, onUpdate 
             type="url"
             value={campaign.finalUrl}
             onChange={(e) => onUpdate({ finalUrl: e.target.value })}
+            placeholder="https://example.com"
+          />
+        </div>
+      </div>
+
+      {/* URL Paths Section */}
+      <div className="mt-6">
+        <h3 className="text-sm font-medium text-gray-700 mb-3">URL Paths</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Input
+            label="Path 1"
+            value={campaign.path1 || ''}
+            onChange={(e) => onUpdate({ path1: e.target.value })}
+            placeholder="e.g., products"
+            maxLength={15}
+            helperText={`${(campaign.path1 || '').length}/15`}
+          />
+          <Input
+            label="Path 2"
+            value={campaign.path2 || ''}
+            onChange={(e) => onUpdate({ path2: e.target.value })}
+            placeholder="e.g., sale"
+            maxLength={15}
+            helperText={`${(campaign.path2 || '').length}/15`}
           />
         </div>
       </div>
