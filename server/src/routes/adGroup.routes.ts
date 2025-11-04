@@ -186,12 +186,12 @@ router.post('/', async (req: Request, res: Response) => {
       return;
     }
 
-    if (data.keywords && (!Array.isArray(data.keywords) || data.keywords.length === 0)) {
+    if (data.keywords && !Array.isArray(data.keywords)) {
       res.status(400).json({
         success: false,
         error: {
           code: 'INVALID_KEYWORDS',
-          message: 'Keywords must be a non-empty array if provided',
+          message: 'Keywords must be an array if provided',
         },
         timestamp: new Date().toISOString(),
       });
@@ -256,12 +256,12 @@ router.put('/:id', async (req: Request, res: Response) => {
       return;
     }
 
-    if (data.keywords !== undefined && (!Array.isArray(data.keywords) || data.keywords.length === 0)) {
+    if (data.keywords !== undefined && !Array.isArray(data.keywords)) {
       res.status(400).json({
         success: false,
         error: {
           code: 'INVALID_KEYWORDS',
-          message: 'Keywords must be a non-empty array',
+          message: 'Keywords must be an array',
         },
         timestamp: new Date().toISOString(),
       });

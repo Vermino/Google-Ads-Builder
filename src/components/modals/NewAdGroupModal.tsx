@@ -60,7 +60,7 @@ const NewAdGroupModal: React.FC<NewAdGroupModalProps> = ({ isOpen, onClose, camp
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!validate()) {
@@ -102,7 +102,8 @@ const NewAdGroupModal: React.FC<NewAdGroupModalProps> = ({ isOpen, onClose, camp
       updatedAt: now,
     };
 
-    addAdGroup(campaignId, newAdGroup);
+    // Wait for backend to create and return the ad group with the real ID
+    const createdAdGroup = await addAdGroup(campaignId, newAdGroup);
 
     // Reset form
     setFormData({
@@ -124,7 +125,10 @@ const NewAdGroupModal: React.FC<NewAdGroupModalProps> = ({ isOpen, onClose, camp
     setErrors({});
 
     onClose();
-    navigate(`/campaigns/${campaignId}/ad-groups/${adGroupId}`);
+    // Use the backend-generated ID for navigation
+    if (createdAdGroup) {
+      navigate(`/campaigns/${campaignId}/ad-groups/${createdAdGroup.id}`);
+    }
   };
 
   const handleChange = (field: string, value: string | boolean) => {

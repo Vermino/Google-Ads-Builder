@@ -165,6 +165,7 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
             : c
         ),
       }));
+      return newAdGroup;
     } catch (error: any) {
       console.error('Failed to create ad group:', error);
       throw error;
