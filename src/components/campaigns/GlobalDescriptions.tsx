@@ -31,10 +31,12 @@ const GlobalDescriptions: React.FC<GlobalDescriptionsProps> = ({ campaign, onUpd
               <div className="space-y-2">
                 <div>
                   <div className="flex justify-between mb-1">
-                    <span className="text-xs text-gray-500">Line 1</span>
+                    <label htmlFor={`desc-${desc.id}-line1`} className="text-xs text-gray-500">Line 1</label>
                     <CharacterCounter current={desc.line1.length} limit={CHAR_LIMITS.DESCRIPTION} />
                   </div>
                   <input
+                    id={`desc-${desc.id}-line1`}
+                    name={`desc-${desc.id}-line1`}
                     type="text"
                     value={desc.line1}
                     onChange={(e) => onUpdateDescription(desc.id, { line1: e.target.value })}
@@ -44,10 +46,12 @@ const GlobalDescriptions: React.FC<GlobalDescriptionsProps> = ({ campaign, onUpd
                 </div>
                 <div>
                   <div className="flex justify-between mb-1">
-                    <span className="text-xs text-gray-500">Line 2</span>
+                    <label htmlFor={`desc-${desc.id}-line2`} className="text-xs text-gray-500">Line 2</label>
                     <CharacterCounter current={desc.line2.length} limit={CHAR_LIMITS.DESCRIPTION} />
                   </div>
                   <input
+                    id={`desc-${desc.id}-line2`}
+                    name={`desc-${desc.id}-line2`}
                     type="text"
                     value={desc.line2}
                     onChange={(e) => onUpdateDescription(desc.id, { line2: e.target.value })}
@@ -78,27 +82,33 @@ const GlobalDescriptions: React.FC<GlobalDescriptionsProps> = ({ campaign, onUpd
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <div className="flex justify-between mb-1">
-              <label className="block text-sm font-medium text-gray-700">Path 1</label>
+              <label htmlFor="campaign-path1" className="block text-sm font-medium text-gray-700">Path 1</label>
               <CharacterCounter current={campaign.path1?.length || 0} limit={CHAR_LIMITS.PATH} />
             </div>
             <input
+              id="campaign-path1"
+              name="campaign-path1"
               type="text"
               value={campaign.path1 || ''}
               onChange={(e) => onUpdateCampaign({ path1: e.target.value })}
               maxLength={CHAR_LIMITS.PATH}
+              placeholder="e.g., products"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
           <div>
             <div className="flex justify-between mb-1">
-              <label className="block text-sm font-medium text-gray-700">Path 2</label>
+              <label htmlFor="campaign-path2" className="block text-sm font-medium text-gray-700">Path 2</label>
               <CharacterCounter current={campaign.path2?.length || 0} limit={CHAR_LIMITS.PATH} />
             </div>
             <input
+              id="campaign-path2"
+              name="campaign-path2"
               type="text"
               value={campaign.path2 || ''}
               onChange={(e) => onUpdateCampaign({ path2: e.target.value })}
               maxLength={CHAR_LIMITS.PATH}
+              placeholder="e.g., sale"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>

@@ -12,6 +12,7 @@ import adGroupRoutes from './routes/adGroup.routes';
 import adRoutes from './routes/ad.routes';
 import { getAvailableProviders } from './services/aiService';
 import { initDatabase } from './db/database';
+import { runMigration } from './db/migrate';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -22,6 +23,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const dbPath = join(__dirname, '../data/campaigns.db');
 initDatabase(dbPath);
+
+// Run migrations to add any missing columns
+runMigration();
 
 // Middleware
 app.use(helmet());
@@ -42,7 +46,10 @@ app.get('/health', async (_req, res) => {
 });
 
 // Routes
-app.use('/api', apiLimiter);
+// Only apply rate limiting in production
+if (config.nodeEnv === 'production') {
+  app.use('/api', apiLimiter);
+}
 app.use('/api/ai', aiRoutes);
 app.use('/api/keywords', keywordsRoutes);
 app.use('/api/claude', claudeRoutes);

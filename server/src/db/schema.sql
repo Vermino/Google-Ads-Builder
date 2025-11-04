@@ -7,6 +7,13 @@ CREATE TABLE IF NOT EXISTS campaigns (
   name TEXT NOT NULL,
   budget REAL NOT NULL DEFAULT 0,
   status TEXT NOT NULL CHECK(status IN ('active', 'paused', 'draft')) DEFAULT 'draft',
+  location TEXT DEFAULT 'United States',
+  start_date TEXT DEFAULT '',
+  end_date TEXT DEFAULT '',
+  final_url TEXT NOT NULL DEFAULT '',
+  path1 TEXT DEFAULT '',
+  path2 TEXT DEFAULT '',
+  global_descriptions TEXT NOT NULL DEFAULT '[]', -- JSON array of GlobalDescription objects
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );

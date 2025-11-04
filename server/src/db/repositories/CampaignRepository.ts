@@ -7,7 +7,39 @@ import { getDatabase } from '../database';
 import type { Campaign, CreateCampaignInput, UpdateCampaignInput } from '../types';
 import { nanoid } from 'nanoid';
 
+// Database row type (global_descriptions stored as JSON string)
+interface CampaignRow {
+  id: string;
+  name: string;
+  budget: number;
+  status: string;
+  location: string;
+  start_date: string;
+  end_date: string;
+  final_url: string;
+  path1: string;
+  path2: string;
+  global_descriptions: string; // JSON string
+  created_at: string;
+  updated_at: string;
+}
+
 export class CampaignRepository {
+  /**
+   * Convert database row to Campaign object
+   */
+  private rowToCampaign(row: CampaignRow): Campaign {
+    return {
+      ...row,
+      startDate: row.start_date,
+      endDate: row.end_date,
+      finalUrl: row.final_url,
+      globalDescriptions: JSON.parse(row.global_descriptions || '[]'),
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    };
+  }
+
   /**
    * Create a new campaign
    */
@@ -18,8 +50,11 @@ export class CampaignRepository {
     const now = new Date().toISOString();
 
     const stmt = db.prepare(`
-      INSERT INTO campaigns (id, name, budget, status, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO campaigns (
+        id, name, budget, status, location, start_date, end_date,
+        final_url, path1, path2, global_descriptions, created_at, updated_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     stmt.run(
@@ -27,6 +62,13 @@ export class CampaignRepository {
       input.name,
       input.budget ?? 0,
       input.status ?? 'draft',
+      input.location ?? 'United States',
+      input.start_date ?? '',
+      input.end_date ?? '',
+      input.final_url ?? '',
+      input.path1 ?? '',
+      input.path2 ?? '',
+      JSON.stringify(input.global_descriptions ?? []),
       now,
       now
     );
@@ -41,9 +83,9 @@ export class CampaignRepository {
     const db = getDatabase();
 
     const stmt = db.prepare('SELECT * FROM campaigns WHERE id = ?');
-    const campaign = stmt.get(id) as Campaign | undefined;
+    const row = stmt.get(id) as CampaignRow | undefined;
 
-    return campaign ?? null;
+    return row ? this.rowToCampaign(row) : null;
   }
 
   /**
@@ -53,7 +95,8 @@ export class CampaignRepository {
     const db = getDatabase();
 
     const stmt = db.prepare('SELECT * FROM campaigns ORDER BY created_at DESC');
-    return stmt.all() as Campaign[];
+    const rows = stmt.all() as CampaignRow[];
+    return rows.map(row => this.rowToCampaign(row));
   }
 
   /**
@@ -63,7 +106,8 @@ export class CampaignRepository {
     const db = getDatabase();
 
     const stmt = db.prepare('SELECT * FROM campaigns WHERE status = ? ORDER BY created_at DESC');
-    return stmt.all(status) as Campaign[];
+    const rows = stmt.all(status) as CampaignRow[];
+    return rows.map(row => this.rowToCampaign(row));
   }
 
   /**
@@ -94,6 +138,41 @@ export class CampaignRepository {
     if (input.status !== undefined) {
       updates.push('status = ?');
       values.push(input.status);
+    }
+
+    if (input.location !== undefined) {
+      updates.push('location = ?');
+      values.push(input.location);
+    }
+
+    if (input.start_date !== undefined) {
+      updates.push('start_date = ?');
+      values.push(input.start_date);
+    }
+
+    if (input.end_date !== undefined) {
+      updates.push('end_date = ?');
+      values.push(input.end_date);
+    }
+
+    if (input.final_url !== undefined) {
+      updates.push('final_url = ?');
+      values.push(input.final_url);
+    }
+
+    if (input.path1 !== undefined) {
+      updates.push('path1 = ?');
+      values.push(input.path1);
+    }
+
+    if (input.path2 !== undefined) {
+      updates.push('path2 = ?');
+      values.push(input.path2);
+    }
+
+    if (input.global_descriptions !== undefined) {
+      updates.push('global_descriptions = ?');
+      values.push(JSON.stringify(input.global_descriptions));
     }
 
     if (updates.length === 0) {
@@ -153,7 +232,8 @@ export class CampaignRepository {
       ORDER BY created_at DESC
     `);
 
-    return stmt.all(`%${query}%`) as Campaign[];
+    const rows = stmt.all(`%${query}%`) as CampaignRow[];
+    return rows.map(row => this.rowToCampaign(row));
   }
 }
 
