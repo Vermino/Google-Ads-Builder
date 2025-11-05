@@ -6,6 +6,7 @@ export interface AdGroupListProps {
   adGroups: AdGroup[];
   onAdGroupClick: (adGroupId: string) => void;
   onAddClick?: () => void;
+  onDelete?: (adGroupId: string) => void;
   // Multi-select props
   selectedIds?: string[];
   onSelectOne?: (id: string, checked: boolean) => void;
@@ -17,6 +18,7 @@ const AdGroupList: React.FC<AdGroupListProps> = ({
   adGroups,
   onAdGroupClick,
   onAddClick,
+  onDelete,
   selectedIds = [],
   onSelectOne,
   onSelectAll,
@@ -25,9 +27,9 @@ const AdGroupList: React.FC<AdGroupListProps> = ({
   const allSelected = adGroups.length > 0 && selectedIds.length === adGroups.length;
   const someSelected = selectedIds.length > 0 && selectedIds.length < adGroups.length;
 
-  const handleCardClick = (adGroupId: string, e: React.MouseEvent) => {
+  const handleCardClick = (adGroupId: string, event: React.MouseEvent) => {
     if (isSelectionMode && onSelectOne) {
-      e.stopPropagation();
+      event.stopPropagation();
       const isSelected = selectedIds.includes(adGroupId);
       onSelectOne(adGroupId, !isSelected);
     } else {
@@ -120,7 +122,14 @@ const AdGroupList: React.FC<AdGroupListProps> = ({
               <div className={isSelectionMode ? 'pl-8' : ''}>
                 <AdGroupCard
                   adGroup={adGroup}
-                  onClick={() => handleCardClick(adGroup.id, {} as React.MouseEvent)}
+                  onClick={(event) => handleCardClick(adGroup.id, event)}
+                  onDelete={
+                    onDelete
+                      ? () => {
+                          onDelete(adGroup.id);
+                        }
+                      : undefined
+                  }
                 />
               </div>
             </div>
