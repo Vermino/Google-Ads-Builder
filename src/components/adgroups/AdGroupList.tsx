@@ -11,6 +11,7 @@ export interface AdGroupListProps {
   onSelectOne?: (id: string, checked: boolean) => void;
   onSelectAll?: (checked: boolean) => void;
   isSelectionMode?: boolean;
+  onDelete?: (adGroupId: string) => void;
 }
 
 const AdGroupList: React.FC<AdGroupListProps> = ({
@@ -21,6 +22,7 @@ const AdGroupList: React.FC<AdGroupListProps> = ({
   onSelectOne,
   onSelectAll,
   isSelectionMode = false,
+  onDelete,
 }) => {
   const allSelected = adGroups.length > 0 && selectedIds.length === adGroups.length;
   const someSelected = selectedIds.length > 0 && selectedIds.length < adGroups.length;
@@ -101,10 +103,7 @@ const AdGroupList: React.FC<AdGroupListProps> = ({
         {adGroups.map((adGroup) => {
           const isSelected = selectedIds.includes(adGroup.id);
           return (
-            <div
-              key={adGroup.id}
-              className={`relative ${isSelected ? 'ring-2 ring-blue-500 rounded-lg' : ''}`}
-            >
+            <div key={adGroup.id} className={`relative ${isSelected ? 'ring-2 ring-blue-500 rounded-lg' : ''}`}>
               {isSelectionMode && onSelectOne && (
                 <div className="absolute top-3 left-3 z-10">
                   <input
@@ -116,6 +115,26 @@ const AdGroupList: React.FC<AdGroupListProps> = ({
                     title={`Select ${adGroup.name}`}
                   />
                 </div>
+              )}
+              {onDelete && !isSelectionMode && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(adGroup.id);
+                  }}
+                  className="absolute top-3 right-3 text-gray-400 hover:text-red-600"
+                  aria-label={`Delete ${adGroup.name}`}
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7h6m-7 0V5a2 2 0 012-2h2a2 2 0 012 2v2m5 0H4"
+                    />
+                  </svg>
+                </button>
               )}
               <div className={isSelectionMode ? 'pl-8' : ''}>
                 <AdGroupCard
