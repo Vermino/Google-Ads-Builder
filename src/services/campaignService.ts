@@ -21,6 +21,8 @@ interface APIResponse<T> {
   timestamp: string;
 }
 
+type BackendEntityStatus = 'active' | 'paused' | 'draft';
+
 /**
  * Backend Campaign Entity (without nested ad groups)
  */
@@ -73,6 +75,11 @@ interface BackendAd {
   name?: string;
   path1?: string;
   path2?: string;
+}
+
+interface BackendAdGroupDuplicate {
+  ad_group: BackendAdGroup;
+  ads: BackendAd[];
 }
 
 /* ==================== TRANSFORMATION FUNCTIONS ==================== */
@@ -257,6 +264,18 @@ function transformAdToBackend(ad: Partial<ResponsiveSearchAd>): Partial<BackendA
     path1: ad.path1,
     path2: ad.path2,
   };
+}
+
+function mapAdStatusToBackend(status: ResponsiveSearchAd['status']): BackendEntityStatus {
+  switch (status) {
+    case 'enabled':
+      return 'active';
+    case 'paused':
+      return 'paused';
+    case 'disabled':
+    default:
+      return 'draft';
+  }
 }
 
 /* ==================== CAMPAIGN CRUD ==================== */
@@ -452,6 +471,72 @@ export async function deleteAdGroup(id: string): Promise<void> {
   }
 }
 
+/**
+ * Duplicate multiple ad groups and their nested ads
+ */
+export async function duplicateAdGroups(
+  campaignId: string,
+  adGroupIds: string[]
+): Promise<AdGroup[]> {
+  try {
+    const response = await apiClient.request<APIResponse<BackendAdGroupDuplicate[]>>(
+      '/api/ad-groups/bulk/duplicate',
+      {
+        method: 'POST',
+        body: JSON.stringify({ campaignId, adGroupIds }),
+      }
+    );
+
+    return response.data.map(({ ad_group, ads }) =>
+      transformAdGroup(ad_group, ads.map(transformAd))
+    );
+  } catch (error: any) {
+    console.error('Failed to duplicate ad groups:', error);
+    throw new Error(error.message || 'Failed to duplicate ad groups');
+  }
+}
+
+/**
+ * Bulk update ad group status values
+ */
+export async function updateAdGroupsStatus(
+  campaignId: string,
+  adGroupIds: string[],
+  status: AdGroup['status']
+): Promise<AdGroup[]> {
+  try {
+    const backendStatus: BackendEntityStatus = status === 'active' ? 'active' : 'paused';
+    const response = await apiClient.request<APIResponse<BackendAdGroup[]>>(
+      '/api/ad-groups/bulk/status',
+      {
+        method: 'PATCH',
+        body: JSON.stringify({ campaignId, adGroupIds, status: backendStatus }),
+      }
+    );
+
+    return await Promise.all(
+      response.data.map(async (backendAdGroup) => {
+        try {
+          const adsResponse = await apiClient.request<APIResponse<BackendAd[]>>(
+            `/api/ad-groups/${backendAdGroup.id}/ads`
+          );
+          const ads = adsResponse.data.map(transformAd);
+          return transformAdGroup(backendAdGroup, ads);
+        } catch (error) {
+          console.error(
+            `Failed to fetch ads for updated ad group ${backendAdGroup.id}:`,
+            error
+          );
+          return transformAdGroup(backendAdGroup, []);
+        }
+      })
+    );
+  } catch (error: any) {
+    console.error('Failed to update ad group statuses:', error);
+    throw new Error(error.message || 'Failed to update ad group statuses');
+  }
+}
+
 /* ==================== AD CRUD ==================== */
 
 /**
@@ -499,5 +584,60 @@ export async function deleteAd(id: string): Promise<void> {
   } catch (error: any) {
     console.error(`Failed to delete ad ${id}:`, error);
     throw new Error(error.message || `Failed to delete ad ${id}`);
+  }
+}
+
+/**
+ * Duplicate multiple ads within an ad group
+ */
+export async function duplicateAds(
+  campaignId: string,
+  adGroupId: string,
+  adIds: string[]
+): Promise<ResponsiveSearchAd[]> {
+  try {
+    const response = await apiClient.request<APIResponse<BackendAd[]>>(
+      '/api/ads/bulk/duplicate',
+      {
+        method: 'POST',
+        body: JSON.stringify({ campaignId, adGroupId, adIds }),
+      }
+    );
+
+    return response.data.map(transformAd);
+  } catch (error: any) {
+    console.error('Failed to duplicate ads:', error);
+    throw new Error(error.message || 'Failed to duplicate ads');
+  }
+}
+
+/**
+ * Bulk update ad status values
+ */
+export async function updateAdsStatus(
+  campaignId: string,
+  adGroupId: string,
+  adIds: string[],
+  status: ResponsiveSearchAd['status']
+): Promise<ResponsiveSearchAd[]> {
+  try {
+    const backendStatus = mapAdStatusToBackend(status);
+    const response = await apiClient.request<APIResponse<BackendAd[]>>(
+      '/api/ads/bulk/status',
+      {
+        method: 'PATCH',
+        body: JSON.stringify({
+          campaignId,
+          adGroupId,
+          adIds,
+          status: backendStatus,
+        }),
+      }
+    );
+
+    return response.data.map(transformAd);
+  } catch (error: any) {
+    console.error('Failed to update ad statuses:', error);
+    throw new Error(error.message || 'Failed to update ad statuses');
   }
 }

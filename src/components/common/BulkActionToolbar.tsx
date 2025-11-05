@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { Trash2, Copy, Circle, CirclePause, X } from 'lucide-react';
+import { Trash2, Copy, Circle, CirclePause, X, Loader2 } from 'lucide-react';
 
 export interface BulkActionToolbarProps {
   selectedCount: number;
-  onDelete: () => void;
-  onDuplicate: () => void;
-  onChangeStatus: (status: 'active' | 'paused' | 'enabled' | 'disabled') => void;
+  onDelete: () => Promise<void> | void;
+  onDuplicate: () => Promise<void> | void;
+  onChangeStatus: (status: StatusValue) => Promise<void> | void;
   onCancel: () => void;
   entityType: 'ad group' | 'ad';
   statusType?: 'adGroup' | 'ad'; // Different status types for different entities
@@ -21,8 +21,16 @@ const BulkActionToolbar: React.FC<BulkActionToolbarProps> = ({
   statusType = 'adGroup',
 }) => {
   const [showStatusMenu, setShowStatusMenu] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [processingAction, setProcessingAction] = useState<'duplicate' | 'delete' | 'status' | null>(null);
 
-  const statusOptions = statusType === 'adGroup'
+  type StatusValue = 'active' | 'paused' | 'enabled' | 'disabled';
+
+  const statusOptions: Array<{
+    value: StatusValue;
+    label: string;
+    icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+  }> = statusType === 'adGroup'
     ? [
         { value: 'active', label: 'Active', icon: Circle },
         { value: 'paused', label: 'Paused', icon: CirclePause },
@@ -33,9 +41,35 @@ const BulkActionToolbar: React.FC<BulkActionToolbarProps> = ({
         { value: 'disabled', label: 'Disabled', icon: X },
       ];
 
-  const handleStatusChange = (status: any) => {
-    onChangeStatus(status);
+  type ActionKey = 'duplicate' | 'delete' | 'status';
+
+  const executeAction = async <Args extends unknown[]>(
+    action: ActionKey,
+    handler: (...args: Args) => Promise<void> | void,
+    ...args: Args
+  ) => {
+    try {
+      const maybePromise = handler(...args);
+      if (maybePromise && typeof (maybePromise as PromiseLike<void>).then === 'function') {
+        setProcessingAction(action);
+        setIsProcessing(true);
+        try {
+          await maybePromise;
+        } finally {
+          setProcessingAction(null);
+          setIsProcessing(false);
+        }
+      }
+    } catch (error) {
+      console.error(`[BulkActionToolbar] Failed to execute ${action} action:`, error);
+      setProcessingAction(null);
+      setIsProcessing(false);
+    }
+  };
+
+  const handleStatusChange = (status: StatusValue) => {
     setShowStatusMenu(false);
+    void executeAction('status', onChangeStatus, status);
   };
 
   return (
@@ -64,23 +98,33 @@ const BulkActionToolbar: React.FC<BulkActionToolbarProps> = ({
           <div className="flex items-center space-x-2">
             {/* Duplicate Button */}
             <button
-              onClick={onDuplicate}
-              className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+              onClick={() => executeAction('duplicate', onDuplicate)}
+              className={`inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors ${isProcessing ? 'disabled:opacity-50 disabled:cursor-not-allowed' : ''}`}
+              disabled={isProcessing}
               title="Duplicate selected items"
             >
-              <Copy className="w-4 h-4 mr-2" />
-              Duplicate
+              {processingAction === 'duplicate' ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Copy className="w-4 h-4 mr-2" />
+              )}
+              {processingAction === 'duplicate' ? 'Duplicating…' : 'Duplicate'}
             </button>
 
             {/* Change Status Dropdown */}
             <div className="relative">
               <button
-                onClick={() => setShowStatusMenu(!showStatusMenu)}
-                className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                onClick={() => !isProcessing && setShowStatusMenu(!showStatusMenu)}
+                className={`inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                disabled={isProcessing}
                 title="Change status"
               >
-                <Circle className="w-4 h-4 mr-2" />
-                Change Status
+                {processingAction === 'status' ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Circle className="w-4 h-4 mr-2" />
+                )}
+                {processingAction === 'status' ? 'Updating…' : 'Change Status'}
                 <svg
                   className={`ml-2 w-4 h-4 transition-transform ${showStatusMenu ? 'rotate-180' : ''}`}
                   fill="none"
@@ -105,7 +149,8 @@ const BulkActionToolbar: React.FC<BulkActionToolbarProps> = ({
                         <button
                           key={option.value}
                           onClick={() => handleStatusChange(option.value)}
-                          className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2 transition-colors"
+                          className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          disabled={isProcessing}
                         >
                           <Icon className="w-4 h-4" />
                           <span>{option.label}</span>
@@ -119,12 +164,17 @@ const BulkActionToolbar: React.FC<BulkActionToolbarProps> = ({
 
             {/* Delete Button */}
             <button
-              onClick={onDelete}
-              className="inline-flex items-center px-4 py-2 border border-red-300 rounded-lg text-sm font-medium text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
+              onClick={() => executeAction('delete', onDelete)}
+              className={`inline-flex items-center px-4 py-2 border border-red-300 rounded-lg text-sm font-medium text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors ${isProcessing ? 'disabled:opacity-50 disabled:cursor-not-allowed' : ''}`}
+              disabled={isProcessing}
               title="Delete selected items"
             >
-              <Trash2 className="w-4 h-4 mr-2" />
-              Delete
+              {processingAction === 'delete' ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Trash2 className="w-4 h-4 mr-2" />
+              )}
+              {processingAction === 'delete' ? 'Processing…' : 'Delete'}
             </button>
 
             {/* Divider */}
@@ -133,7 +183,8 @@ const BulkActionToolbar: React.FC<BulkActionToolbarProps> = ({
             {/* Cancel Button */}
             <button
               onClick={onCancel}
-              className="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors"
+              className={`inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
+              disabled={isProcessing}
               title="Clear selection"
             >
               <X className="w-4 h-4 mr-2" />

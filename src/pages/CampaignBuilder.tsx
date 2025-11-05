@@ -94,19 +94,35 @@ const CampaignBuilder = () => {
     setIsDeleteModalOpen(true);
   }, []);
 
-  const handleConfirmDelete = useCallback(() => {
-    if (campaignId) {
-      deleteAdGroups(campaignId, selectedAdGroupIds);
+  const handleConfirmDelete = useCallback(async () => {
+    if (!campaignId || selectedAdGroupIds.length === 0) {
+      return;
+    }
+
+    try {
+      await deleteAdGroups(campaignId, selectedAdGroupIds);
       toast.success(`${selectedAdGroupIds.length} ad group${selectedAdGroupIds.length !== 1 ? 's' : ''} deleted`);
       setSelectedAdGroupIds([]);
+    } catch (error) {
+      console.error('Failed to delete ad groups:', error);
+      toast.error('Failed to delete selected ad groups. Please try again.');
+      throw error;
     }
   }, [campaignId, selectedAdGroupIds, deleteAdGroups, toast]);
 
-  const handleBulkDuplicate = useCallback(() => {
-    if (campaignId) {
-      duplicateAdGroups(campaignId, selectedAdGroupIds);
+  const handleBulkDuplicate = useCallback(async () => {
+    if (!campaignId || selectedAdGroupIds.length === 0) {
+      return;
+    }
+
+    try {
+      await duplicateAdGroups(campaignId, selectedAdGroupIds);
       toast.success(`${selectedAdGroupIds.length} ad group${selectedAdGroupIds.length !== 1 ? 's' : ''} duplicated`);
       setSelectedAdGroupIds([]);
+    } catch (error) {
+      console.error('Failed to duplicate ad groups:', error);
+      toast.error('Failed to duplicate selected ad groups. Please try again.');
+      throw error;
     }
   }, [campaignId, selectedAdGroupIds, duplicateAdGroups, toast]);
 
@@ -114,13 +130,24 @@ const CampaignBuilder = () => {
     setIsStatusModalOpen(true);
   }, []);
 
-  const handleConfirmChangeStatus = useCallback((status: string) => {
-    if (campaignId) {
-      updateAdGroupsStatus(campaignId, selectedAdGroupIds, status as AdGroup['status']);
-      toast.success(`${selectedAdGroupIds.length} ad group${selectedAdGroupIds.length !== 1 ? 's' : ''} updated`);
-      setSelectedAdGroupIds([]);
-    }
-  }, [campaignId, selectedAdGroupIds, updateAdGroupsStatus, toast]);
+  const handleConfirmChangeStatus = useCallback(
+    async (status: string) => {
+      if (!campaignId || selectedAdGroupIds.length === 0) {
+        return;
+      }
+
+      try {
+        await updateAdGroupsStatus(campaignId, selectedAdGroupIds, status as AdGroup['status']);
+        toast.success(`${selectedAdGroupIds.length} ad group${selectedAdGroupIds.length !== 1 ? 's' : ''} updated`);
+        setSelectedAdGroupIds([]);
+      } catch (error) {
+        console.error('Failed to update ad group statuses:', error);
+        toast.error('Failed to update ad group statuses. Please try again.');
+        throw error;
+      }
+    },
+    [campaignId, selectedAdGroupIds, updateAdGroupsStatus, toast]
+  );
 
   // Keyboard shortcuts
   useEffect(() => {
