@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Trash2, Copy, Circle, CirclePause, X, Loader2 } from 'lucide-react';
 
+export type StatusValue = 'active' | 'paused' | 'enabled' | 'disabled';
+
 export interface BulkActionToolbarProps {
   selectedCount: number;
   onDelete: () => Promise<void> | void;
@@ -23,8 +25,6 @@ const BulkActionToolbar: React.FC<BulkActionToolbarProps> = ({
   const [showStatusMenu, setShowStatusMenu] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingAction, setProcessingAction] = useState<'duplicate' | 'delete' | 'status' | null>(null);
-
-  type StatusValue = 'active' | 'paused' | 'enabled' | 'disabled';
 
   const statusOptions: Array<{
     value: StatusValue;
