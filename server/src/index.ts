@@ -6,13 +6,17 @@ import { errorHandler } from './middleware/errorHandler';
 import { apiLimiter } from './middleware/rateLimiter';
 import aiRoutes from './routes/ai.routes';
 import keywordsRoutes from './routes/keywords.routes';
-import claudeRoutes from './routes/claude.routes';
 import campaignRoutes from './routes/campaign.routes';
 import adGroupRoutes from './routes/adGroup.routes';
 import adRoutes from './routes/ad.routes';
+import importRoutes from './routes/import.routes';
+import recommendationsRoutes from './routes/recommendations.routes';
+import automationRoutes from './routes/automation.routes';
+import sheetsRoutes from './routes/sheets.routes';
 import { getAvailableProviders } from './services/aiService';
 import { initDatabase } from './db/database';
 import { runMigration } from './db/migrate';
+import { runDueAutomations } from './services/automationOrchestrator';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -52,10 +56,13 @@ if (config.nodeEnv === 'production') {
 }
 app.use('/api/ai', aiRoutes);
 app.use('/api/keywords', keywordsRoutes);
-app.use('/api/claude', claudeRoutes);
 app.use('/api/campaigns', campaignRoutes);
 app.use('/api/ad-groups', adGroupRoutes);
 app.use('/api/ads', adRoutes);
+app.use('/api/import', importRoutes);
+app.use('/api/recommendations', recommendationsRoutes);
+app.use('/api/automation', automationRoutes);
+app.use('/api/sheets', sheetsRoutes);
 
 // Error handling
 app.use(errorHandler);
@@ -75,4 +82,14 @@ app.listen(PORT, () => {
   } else {
     console.log('✅ Configuration valid');
   }
+
+  // Start automation scheduler (check every minute)
+  console.log('🤖 Starting automation scheduler...');
+  setInterval(async () => {
+    try {
+      await runDueAutomations();
+    } catch (error) {
+      console.error('Error running scheduled automations:', error);
+    }
+  }, 60000); // Run every minute
 });

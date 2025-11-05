@@ -4,7 +4,7 @@
  */
 
 import Database from 'better-sqlite3';
-import { readFileSync } from 'fs';
+import { readFileSync, readdirSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -14,6 +14,73 @@ const __dirname = dirname(__filename);
 
 // Database instance (singleton)
 let db: Database.Database | null = null;
+
+/**
+ * Run database migrations from the migrations folder
+ */
+function runMigrations(database: Database.Database): void {
+  const migrationsPath = join(__dirname, 'migrations');
+
+  if (!existsSync(migrationsPath)) {
+    console.log('📦 No migrations folder found, skipping migrations');
+    return;
+  }
+
+  // Create migrations tracking table
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS migrations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL UNIQUE,
+      applied_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `);
+
+  // Get list of migration files
+  const migrationFiles = readdirSync(migrationsPath)
+    .filter(file => file.endsWith('.sql'))
+    .sort(); // Ensure migrations run in order
+
+  for (const file of migrationFiles) {
+    // Check if migration has already been applied
+    const alreadyApplied = database
+      .prepare('SELECT name FROM migrations WHERE name = ?')
+      .get(file);
+
+    if (alreadyApplied) {
+      console.log(`⏭️  Migration ${file} already applied, skipping`);
+      continue;
+    }
+
+    console.log(`🔄 Running migration: ${file}`);
+
+    const migrationPath = join(migrationsPath, file);
+    const migration = readFileSync(migrationPath, 'utf-8');
+
+    try {
+      // Execute migration in a transaction
+      database.transaction(() => {
+        const statements = migration
+          .split(';')
+          .map(s => s.trim())
+          .filter(s => s.length > 0 && !s.startsWith('--'));
+
+        for (const statement of statements) {
+          database.exec(statement);
+        }
+
+        // Record migration as applied
+        database
+          .prepare('INSERT INTO migrations (name) VALUES (?)')
+          .run(file);
+      })();
+
+      console.log(`✅ Migration ${file} applied successfully`);
+    } catch (error) {
+      console.error(`❌ Failed to apply migration ${file}:`, error);
+      throw error;
+    }
+  }
+}
 
 /**
  * Initialize the SQLite database
@@ -49,6 +116,9 @@ export function initDatabase(dbPath: string = './data/campaigns.db'): Database.D
       db!.exec(statement);
     }
   })();
+
+  // Run migrations
+  runMigrations(db);
 
   console.log('✅ Database initialized successfully');
 
