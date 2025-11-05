@@ -41,7 +41,7 @@ interface CampaignStore {
 
   // Ad CRUD
   getAd: (campaignId: string, adGroupId: string, adId: string) => ResponsiveSearchAd | undefined;
-  addAd: (campaignId: string, adGroupId: string, ad: ResponsiveSearchAd) => Promise<void>;
+  addAd: (campaignId: string, adGroupId: string, ad: ResponsiveSearchAd) => Promise<ResponsiveSearchAd>;
   updateAd: (campaignId: string, adGroupId: string, adId: string, updates: Partial<ResponsiveSearchAd>) => Promise<void>;
   deleteAd: (campaignId: string, adGroupId: string, adId: string) => Promise<void>;
 
@@ -327,6 +327,7 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
             : c
         ),
       }));
+      return newAd;
     } catch (error: any) {
       console.error('Failed to create ad:', error);
       throw error;

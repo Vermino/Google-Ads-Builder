@@ -25,6 +25,8 @@ const NewAdModal: React.FC<NewAdModalProps> = ({ isOpen, onClose, campaignId, ad
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -38,47 +40,73 @@ const NewAdModal: React.FC<NewAdModalProps> = ({ isOpen, onClose, campaignId, ad
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    if (isSubmitting) {
+      return;
+    }
+
+    setSubmitError(null);
 
     if (!validate()) {
       return;
     }
 
-    const now = new Date().toISOString();
-    const adId = `ad-${Date.now()}`;
+    setIsSubmitting(true);
 
-    // Use campaign's final URL and paths as defaults
-    const finalUrl = campaign?.finalUrl || '';
+    const timestamp = Date.now();
+    const now = new Date().toISOString();
+
+    // Use campaign's final URL and paths as defaults, fallback to a placeholder URL for backend compatibility
+    const finalUrl = campaign?.finalUrl || 'https://www.example.com';
     const path1 = campaign?.path1;
     const path2 = campaign?.path2;
 
+    const placeholderHeadlines = Array.from({ length: 3 }, (_, index) => ({
+      id: `headline-${timestamp}-${index + 1}`,
+      text: `${formData.name || campaign?.name || 'Placeholder'} headline ${index + 1}`,
+    }));
+
+    const placeholderDescriptions = Array.from({ length: 2 }, (_, index) => ({
+      id: `description-${timestamp}-${index + 1}`,
+      text: `${formData.name || campaign?.name || 'Placeholder'} description ${index + 1}`,
+    }));
+
     const newAd: ResponsiveSearchAd = {
-      id: adId,
+      id: `ad-${timestamp}`,
       adGroupId,
-      name: formData.name || `Ad ${adId}`,
+      name: formData.name || `Ad ${timestamp}`,
       status: formData.status,
       finalUrl,
       path1,
       path2,
-      headlines: [],
-      descriptions: [],
+      headlines: placeholderHeadlines,
+      descriptions: placeholderDescriptions,
       createdAt: now,
       updatedAt: now,
     };
 
-    addAd(campaignId, adGroupId, newAd);
+    try {
+      const createdAd = await addAd(campaignId, adGroupId, newAd);
 
-    // Reset form
-    setFormData({
-      name: '',
-      status: 'enabled',
-      adType: 'rsa',
-    });
-    setErrors({});
+      // Reset form
+      setFormData({
+        name: '',
+        status: 'enabled',
+        adType: 'rsa',
+      });
+      setErrors({});
 
-    onClose();
-    navigate(`/campaigns/${campaignId}/ad-groups/${adGroupId}/ads/${adId}`);
+      onClose();
+      navigate(`/campaigns/${campaignId}/ad-groups/${adGroupId}/ads/${createdAd.id}`);
+    } catch (error: unknown) {
+      console.error('Failed to create ad:', error);
+      const message = error instanceof Error ? error.message : 'Failed to create ad. Please try again.';
+      setSubmitError(message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleChange = (field: string, value: string) => {
@@ -94,18 +122,28 @@ const NewAdModal: React.FC<NewAdModalProps> = ({ isOpen, onClose, campaignId, ad
 
   const footer = (
     <>
-      <Button variant="secondary" onClick={onClose}>
+      <Button variant="secondary" onClick={onClose} disabled={isSubmitting}>
         Cancel
       </Button>
-      <Button variant="primary" onClick={handleSubmit}>
-        Create Ad
+      <Button
+        variant="primary"
+        type="submit"
+        form="new-ad-form"
+        disabled={isSubmitting}
+      >
+        {isSubmitting ? 'Creating…' : 'Create Ad'}
       </Button>
     </>
   );
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Create New Ad" footer={footer} size="md">
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form id="new-ad-form" onSubmit={handleSubmit} className="space-y-4">
+        {submitError && (
+          <div className="rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-700">
+            {submitError}
+          </div>
+        )}
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
           <div className="flex items-start">
             <svg
