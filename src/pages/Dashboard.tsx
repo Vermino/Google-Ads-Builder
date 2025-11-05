@@ -60,6 +60,38 @@ const Dashboard = () => {
     }
   };
 
+  const handleRequestDeleteCampaign = (campaignId: string) => {
+    const campaign = campaigns.find((c) => c.id === campaignId);
+    if (campaign) {
+      setCampaignToDelete({ id: campaign.id, name: campaign.name });
+      setIsDeleteModalOpen(true);
+    }
+  };
+
+  const handleConfirmDeleteCampaign = async () => {
+    if (!campaignToDelete) {
+      return;
+    }
+
+    try {
+      await deleteCampaign(campaignToDelete.id);
+      setToast({
+        message: `Campaign "${campaignToDelete.name}" deleted`,
+        type: 'success',
+      });
+    } catch (error) {
+      setToast({
+        message: error instanceof Error ? error.message : 'Failed to delete campaign',
+        type: 'error',
+      });
+    }
+  };
+
+  const handleCloseDeleteModal = () => {
+    setIsDeleteModalOpen(false);
+    setCampaignToDelete(null);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -114,7 +146,11 @@ const Dashboard = () => {
             </div>
           </div>
         ) : (
-          <CampaignList campaigns={campaigns} onCampaignClick={handleCampaignClick} />
+          <CampaignList
+            campaigns={campaigns}
+            onCampaignClick={handleCampaignClick}
+            onDelete={handleRequestDeleteCampaign}
+          />
         )}
       </main>
 
@@ -130,6 +166,15 @@ const Dashboard = () => {
         onClose={handleExportModalClose}
         campaigns={campaigns}
         onExport={handleExport}
+      />
+
+      {/* Delete Campaign Modal */}
+      <DeleteConfirmModal
+        isOpen={isDeleteModalOpen && Boolean(campaignToDelete)}
+        onClose={handleCloseDeleteModal}
+        onConfirm={handleConfirmDeleteCampaign}
+        itemName={campaignToDelete?.name ?? ''}
+        entityType="campaign"
       />
 
       {/* Toast Notification */}

@@ -6,7 +6,7 @@ import GlobalDescriptions from '@/components/campaigns/GlobalDescriptions';
 import AdGroupList from '@/components/adgroups/AdGroupList';
 import NewAdGroupModal from '@/components/modals/NewAdGroupModal';
 import BulkActionToolbar from '@/components/common/BulkActionToolbar';
-import { BulkDeleteConfirmModal, BulkChangeStatusModal } from '@/components/modals';
+import { BulkDeleteConfirmModal, BulkChangeStatusModal, DeleteConfirmModal } from '@/components/modals';
 import { useToast } from '@/hooks/useToast';
 import type { AdGroup } from '@/types';
 
@@ -17,8 +17,11 @@ const CampaignBuilder = () => {
 
   // Bulk selection state
   const [selectedAdGroupIds, setSelectedAdGroupIds] = useState<string[]>([]);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
+
+  // Single delete state
+  const [adGroupToDelete, setAdGroupToDelete] = useState<{ id: string; name: string } | null>(null);
 
   const campaign = useCampaignStore((state) => state.getCampaign(campaignId!));
   const loadCampaigns = useCampaignStore((state) => state.loadCampaigns);
@@ -27,6 +30,7 @@ const CampaignBuilder = () => {
   const updateGlobalDescription = useCampaignStore((state) => state.updateGlobalDescription);
 
   // Bulk operations
+  const deleteAdGroup = useCampaignStore((state) => state.deleteAdGroup);
   const deleteAdGroups = useCampaignStore((state) => state.deleteAdGroups);
   const duplicateAdGroups = useCampaignStore((state) => state.duplicateAdGroups);
   const updateAdGroupsStatus = useCampaignStore((state) => state.updateAdGroupsStatus);
@@ -91,7 +95,7 @@ const CampaignBuilder = () => {
 
   // Bulk action handlers
   const handleBulkDelete = useCallback(() => {
-    setIsDeleteModalOpen(true);
+    setIsBulkDeleteModalOpen(true);
   }, []);
 
   const handleConfirmDelete = useCallback(() => {
@@ -101,6 +105,33 @@ const CampaignBuilder = () => {
       setSelectedAdGroupIds([]);
     }
   }, [campaignId, selectedAdGroupIds, deleteAdGroups, toast]);
+
+  const handleRequestDeleteAdGroup = useCallback(
+    (adGroupId: string) => {
+      const adGroup = campaign?.adGroups.find((ag) => ag.id === adGroupId);
+      if (adGroup) {
+        setAdGroupToDelete({ id: adGroup.id, name: adGroup.name });
+      }
+    },
+    [campaign]
+  );
+
+  const handleConfirmDeleteAdGroup = useCallback(async () => {
+    if (campaignId && adGroupToDelete) {
+      try {
+        await deleteAdGroup(campaignId, adGroupToDelete.id);
+        setSelectedAdGroupIds((prev) => prev.filter((id) => id !== adGroupToDelete.id));
+        toast.success(`Ad group "${adGroupToDelete.name}" deleted`);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Failed to delete ad group';
+        toast.error(message);
+      }
+    }
+  }, [campaignId, adGroupToDelete, deleteAdGroup, toast]);
+
+  const handleCloseDeleteModal = useCallback(() => {
+    setAdGroupToDelete(null);
+  }, []);
 
   const handleBulkDuplicate = useCallback(() => {
     if (campaignId) {
@@ -214,6 +245,7 @@ const CampaignBuilder = () => {
           adGroups={campaign.adGroups}
           onAdGroupClick={handleAdGroupClick}
           onAddClick={handleAddAdGroup}
+          onDelete={handleRequestDeleteAdGroup}
           selectedIds={selectedAdGroupIds}
           onSelectOne={handleSelectOne}
           onSelectAll={handleSelectAll}
@@ -243,8 +275,8 @@ const CampaignBuilder = () => {
 
       {/* Bulk Delete Confirm Modal */}
       <BulkDeleteConfirmModal
-        isOpen={isDeleteModalOpen}
-        onClose={() => setIsDeleteModalOpen(false)}
+        isOpen={isBulkDeleteModalOpen}
+        onClose={() => setIsBulkDeleteModalOpen(false)}
         onConfirm={handleConfirmDelete}
         itemCount={selectedAdGroupIds.length}
         itemNames={selectedAdGroupNames}
@@ -260,6 +292,15 @@ const CampaignBuilder = () => {
         itemNames={selectedAdGroupNames}
         entityType="ad group"
         statusType="adGroup"
+      />
+
+      {/* Single Delete Confirm Modal */}
+      <DeleteConfirmModal
+        isOpen={Boolean(adGroupToDelete)}
+        onClose={handleCloseDeleteModal}
+        onConfirm={handleConfirmDeleteAdGroup}
+        itemName={adGroupToDelete?.name ?? ''}
+        entityType="ad group"
       />
     </div>
   );
