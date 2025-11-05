@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Trash2, Copy, Circle, CirclePause, X, Loader2 } from 'lucide-react';
 
-export type StatusValue = 'active' | 'paused' | 'enabled' | 'disabled';
+type StatusValue = 'active' | 'paused' | 'enabled' | 'disabled';
 
 export interface BulkActionToolbarProps {
   selectedCount: number;
