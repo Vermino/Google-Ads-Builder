@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { CheckCircle, XCircle, Loader2, AlertCircle, RefreshCw, Server } from 'lucide-react';
+import { CheckCircle, XCircle, Loader2, AlertCircle, RefreshCw, Server, Key, Trash2 } from 'lucide-react';
 import { apiClient, getAPIConfigDebug, isAPIConfigured } from '@/services/apiClient';
+import ClaudeTokenSetup from './ClaudeTokenSetup';
 
 const AISettings: React.FC = () => {
   // Connection state
   const [isConnected, setIsConnected] = useState(false);
   const [providers, setProviders] = useState<string[]>([]);
   const [checking, setChecking] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showTokenSetup, setShowTokenSetup] = useState(false);
 
   // Get API configuration for display
   const apiConfig = getAPIConfigDebug();
@@ -26,7 +29,8 @@ const AISettings: React.FC = () => {
       // Get available providers
       const result = await apiClient.getProviders();
 
-      setProviders(result.providers || []);
+      // Backend returns { success: true, data: { providers: [...] } }
+      setProviders((result as any).data?.providers || result.providers || []);
       setIsConnected(true);
     } catch (err: any) {
       setIsConnected(false);
@@ -34,6 +38,31 @@ const AISettings: React.FC = () => {
       setError(err.message || 'Failed to connect to API server');
     } finally {
       setChecking(false);
+    }
+  };
+
+  /**
+   * Disconnect Claude token
+   */
+  const handleDisconnect = async () => {
+    if (!confirm('Are you sure you want to disconnect Claude? You will need to reconnect to use AI features.')) {
+      return;
+    }
+
+    setDisconnecting(true);
+    setError(null);
+
+    try {
+      await apiClient.disconnectClaude();
+      console.log('✅ Claude disconnected successfully');
+
+      // Refresh providers list
+      await checkConnection();
+    } catch (err: any) {
+      setError(err.message || 'Failed to disconnect Claude');
+      console.error('❌ Disconnect failed:', err);
+    } finally {
+      setDisconnecting(false);
     }
   };
 
@@ -177,6 +206,14 @@ const AISettings: React.FC = () => {
                   <p>Please configure VITE_API_TOKEN in your .env.local file</p>
                 </div>
               )}
+
+              {!isConnected && apiConfig.hasToken && (
+                <div className="mt-3">
+                  <p className="text-sm text-gray-600">
+                    Unable to connect to backend. Please ensure the server is running and Gemini API key is configured in server/.env
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -203,17 +240,47 @@ const AISettings: React.FC = () => {
                           <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5zm0 18c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6z" />
                         </svg>
                       )}
+                      {provider === 'gemini' && (
+                        <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+                        </svg>
+                      )}
                       <span className="text-sm font-medium text-gray-900 capitalize">
-                        {provider === 'openai' ? 'OpenAI GPT-4' : provider === 'claude' ? 'Claude Sonnet' : provider}
+                        {provider === 'openai' ? 'OpenAI GPT-4' : provider === 'claude' ? 'Claude Sonnet' : provider === 'gemini' ? 'Google Gemini' : provider}
                       </span>
                       <CheckCircle className="w-4 h-4 text-green-600" />
                     </div>
                   </div>
                 ))}
               </div>
-              <p className="text-xs text-gray-500 mt-2">
-                These AI providers are configured on the backend server
-              </p>
+              <div className="mt-3 flex items-center justify-between">
+                <p className="text-xs text-gray-500">
+                  These AI providers are configured on the backend server
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* No Providers - Setup Required */}
+          {isConnected && providers.length === 0 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                AI Providers
+              </label>
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1">
+                    <h4 className="text-sm font-semibold text-yellow-800">No AI Providers Configured</h4>
+                    <p className="text-sm text-yellow-700 mt-1">
+                      Configure your AI provider API keys on the backend server to enable AI-powered ad copy generation.
+                    </p>
+                    <p className="text-xs text-yellow-600 mt-2">
+                      Add GEMINI_API_KEY to server/.env to enable AI features (free tier available!)
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -252,6 +319,17 @@ VITE_API_TOKEN=your-api-token-here`}
           <li>Review backend server logs for any errors</li>
         </ul>
       </div>
+
+      {/* Claude Token Setup Dialog */}
+      <ClaudeTokenSetup
+        isOpen={showTokenSetup}
+        onClose={() => setShowTokenSetup(false)}
+        onTokenSaved={(token) => {
+          console.log('Token saved:', token.substring(0, 20) + '...');
+          setShowTokenSetup(false);
+          checkConnection();
+        }}
+      />
     </div>
   );
 };

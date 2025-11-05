@@ -24,7 +24,7 @@ router.use(strictApiLimiter); // Use strict limiter for AI operations
  *
  * Request body:
  * {
- *   "provider": "openai" | "claude",
+ *   "provider": "openai" | "claude" | "gemini",
  *   "businessDescription": string,
  *   "targetKeywords"?: string[],
  *   "tone"?: "professional" | "casual" | "urgent" | "friendly",
@@ -42,7 +42,7 @@ router.use(strictApiLimiter); // Use strict limiter for AI operations
  *     "headlines": string[],
  *     "descriptions": string[],
  *     "generatedAt": string,
- *     "provider": "openai" | "claude"
+ *     "provider": "openai" | "claude" | "gemini"
  *   },
  *   "timestamp": string
  * }
@@ -72,21 +72,21 @@ router.post(
         'provider is required',
         {
           field: 'provider',
-          validValues: ['openai', 'claude'],
+          validValues: ['openai', 'claude', 'gemini'],
           hint: 'Specify which AI provider to use',
         }
       );
     }
 
-    if (!['openai', 'claude'].includes(request.provider)) {
+    if (!['openai', 'claude', 'gemini'].includes(request.provider)) {
       throw new APIErrorClass(
         400,
         'VALIDATION_ERROR',
-        'Invalid provider. Must be "openai" or "claude"',
+        'Invalid provider. Must be "openai", "claude", or "gemini"',
         {
           field: 'provider',
           received: request.provider,
-          validValues: ['openai', 'claude'],
+          validValues: ['openai', 'claude', 'gemini'],
         }
       );
     }
@@ -161,7 +161,7 @@ router.post(
 router.get(
   '/providers',
   asyncHandler(async (_req, res) => {
-    const providers = getAvailableProviders();
+    const providers = await getAvailableProviders();
 
     if (providers.length === 0) {
       throw new APIErrorClass(

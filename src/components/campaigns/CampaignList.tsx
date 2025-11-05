@@ -5,9 +5,10 @@ import CampaignCard from './CampaignCard';
 export interface CampaignListProps {
   campaigns: Campaign[];
   onCampaignClick: (campaignId: string) => void;
+  onDelete?: (campaignId: string) => void;
 }
 
-const CampaignList: React.FC<CampaignListProps> = ({ campaigns, onCampaignClick }) => {
+const CampaignList: React.FC<CampaignListProps> = ({ campaigns, onCampaignClick, onDelete }) => {
   if (campaigns.length === 0) {
     return (
       <div className="text-center py-16">
@@ -43,6 +44,7 @@ const CampaignList: React.FC<CampaignListProps> = ({ campaigns, onCampaignClick 
           key={campaign.id}
           campaign={campaign}
           onClick={() => onCampaignClick(campaign.id)}
+          onDelete={onDelete}
         />
       ))}
     </div>

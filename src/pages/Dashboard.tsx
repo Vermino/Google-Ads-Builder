@@ -6,6 +6,7 @@ import CampaignList from '@/components/campaigns/CampaignList';
 import ExportButton from '@/components/common/ExportButton';
 import ExportModal from '@/components/common/ExportModal';
 import NewCampaignModal from '@/components/modals/NewCampaignModal';
+import DeleteConfirmModal from '@/components/modals/DeleteConfirmModal';
 import Toast from '@/components/common/Toast';
 import { exportToGoogleAds } from '@/utils/csvExport';
 import type { ExportOptions } from '@/utils/csvExport';
@@ -13,10 +14,13 @@ import type { ExportOptions } from '@/utils/csvExport';
 const Dashboard = () => {
   const campaigns = useCampaignStore((state) => state.campaigns);
   const loadCampaigns = useCampaignStore((state) => state.loadCampaigns);
+  const deleteCampaign = useCampaignStore((state) => state.deleteCampaign);
   const loading = useCampaignStore((state) => state.loading);
   const navigate = useNavigate();
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isNewCampaignModalOpen, setIsNewCampaignModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [campaignToDelete, setCampaignToDelete] = useState<{ id: string; name: string } | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   // Load campaigns from backend on mount

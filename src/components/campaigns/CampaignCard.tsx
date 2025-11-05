@@ -2,13 +2,15 @@ import React from 'react';
 import type { Campaign } from '@/types';
 import Card from '@/components/common/Card';
 import Badge from '@/components/common/Badge';
+import { Trash2 } from 'lucide-react';
 
 export interface CampaignCardProps {
   campaign: Campaign;
   onClick?: () => void;
+  onDelete?: (campaignId: string) => void;
 }
 
-const CampaignCard: React.FC<CampaignCardProps> = ({ campaign, onClick }) => {
+const CampaignCard: React.FC<CampaignCardProps> = ({ campaign, onClick, onDelete }) => {
   // Calculate stats
   const totalAdGroups = campaign.adGroups.length;
   const totalKeywords = campaign.adGroups.reduce((sum, ag) => sum + ag.keywords.length, 0);
@@ -33,9 +35,24 @@ const CampaignCard: React.FC<CampaignCardProps> = ({ campaign, onClick }) => {
             {campaign.name}
           </h3>
         </div>
-        <Badge variant={statusVariant}>
-          {campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1)}
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Badge variant={statusVariant}>
+            {campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1)}
+          </Badge>
+          {onDelete && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(campaign.id);
+              }}
+              className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+              aria-label="Delete campaign"
+              title="Delete campaign"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Stats */}
