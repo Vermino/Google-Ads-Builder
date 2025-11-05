@@ -27,17 +27,22 @@ interface CampaignStore {
 
   // Ad Group CRUD
   getAdGroup: (campaignId: string, adGroupId: string) => AdGroup | undefined;
-  addAdGroup: (campaignId: string, adGroup: AdGroup) => Promise<void>;
+  addAdGroup: (campaignId: string, adGroup: AdGroup) => Promise<AdGroup>;
   updateAdGroup: (campaignId: string, adGroupId: string, updates: Partial<AdGroup>) => Promise<void>;
   deleteAdGroup: (campaignId: string, adGroupId: string) => Promise<void>;
 
   // Keyword CRUD
-  addKeyword: (campaignId: string, adGroupId: string, keyword: Keyword) => void;
-  updateKeyword: (campaignId: string, adGroupId: string, keywordId: string, updates: Partial<Keyword>) => void;
-  deleteKeyword: (campaignId: string, adGroupId: string, keywordId: string) => void;
+  addKeyword: (campaignId: string, adGroupId: string, keyword: Keyword) => Promise<void>;
+  updateKeyword: (
+    campaignId: string,
+    adGroupId: string,
+    keywordId: string,
+    updates: Partial<Keyword>
+  ) => Promise<void>;
+  deleteKeyword: (campaignId: string, adGroupId: string, keywordId: string) => Promise<void>;
 
   // Bulk Keyword Operations
-  addKeywords: (campaignId: string, adGroupId: string, keywords: Keyword[]) => void;
+  addKeywords: (campaignId: string, adGroupId: string, keywords: Keyword[]) => Promise<void>;
 
   // Ad CRUD
   getAd: (campaignId: string, adGroupId: string, adId: string) => ResponsiveSearchAd | undefined;
@@ -69,10 +74,89 @@ interface CampaignStore {
   updateAdsStatus: (campaignId: string, adGroupId: string, adIds: string[], status: ResponsiveSearchAd['status']) => void;
 }
 
-export const useCampaignStore = create<CampaignStore>((set, get) => ({
-  campaigns: [],
-  loading: false,
-  error: null,
+export const useCampaignStore = create<CampaignStore>((set, get) => {
+  const syncAdGroupKeywords = async (
+    campaignId: string,
+    adGroupId: string,
+    computeKeywords: (currentKeywords: Keyword[]) => Keyword[]
+  ) => {
+    const prevCampaigns = get().campaigns;
+    const currentAdGroup = get().getAdGroup(campaignId, adGroupId);
+
+    if (!currentAdGroup) {
+      console.warn(`Attempted to update keywords for missing ad group ${adGroupId}`);
+      return;
+    }
+
+    const originalKeywords = currentAdGroup.keywords || [];
+    const updatedKeywords = computeKeywords(originalKeywords);
+
+    const hasChanges =
+      updatedKeywords.length !== originalKeywords.length ||
+      updatedKeywords.some((keyword, index) => keyword !== originalKeywords[index]);
+
+    if (!hasChanges) {
+      return;
+    }
+
+    const optimisticUpdatedAt = new Date().toISOString();
+
+    set((state) => ({
+      campaigns: state.campaigns.map((c) =>
+        c.id === campaignId
+          ? {
+              ...c,
+              adGroups: c.adGroups.map((ag) =>
+                ag.id === adGroupId
+                  ? {
+                      ...ag,
+                      keywords: updatedKeywords,
+                      updatedAt: optimisticUpdatedAt,
+                    }
+                  : ag
+              ),
+              updatedAt: optimisticUpdatedAt,
+            }
+          : c
+      ),
+      error: null,
+    }));
+
+    try {
+      const updatedAdGroup = await campaignService.updateAdGroup(adGroupId, {
+        id: adGroupId,
+        campaignId,
+        keywords: updatedKeywords,
+      });
+
+      set((state) => ({
+        campaigns: state.campaigns.map((c) =>
+          c.id === campaignId
+            ? {
+                ...c,
+                adGroups: c.adGroups.map((ag) =>
+                  ag.id === adGroupId ? { ...ag, ...updatedAdGroup } : ag
+                ),
+                updatedAt: updatedAdGroup.updatedAt || optimisticUpdatedAt,
+              }
+            : c
+        ),
+        error: null,
+      }));
+    } catch (error: any) {
+      console.error('Failed to sync ad group keywords:', error);
+      set({
+        campaigns: prevCampaigns,
+        error: error.message || 'Failed to update keywords. Please try again.',
+      });
+      throw error;
+    }
+  };
+
+  return {
+    campaigns: [],
+    loading: false,
+    error: null,
 
   // Data Loading
   loadCampaigns: async () => {
@@ -213,91 +297,39 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
   },
 
   // Keyword CRUD
-  addKeyword: (campaignId, adGroupId, keyword) => {
-    set((state) => ({
-      campaigns: state.campaigns.map((c) =>
-        c.id === campaignId
-          ? {
-              ...c,
-              adGroups: c.adGroups.map((ag) =>
-                ag.id === adGroupId
-                  ? {
-                      ...ag,
-                      keywords: [...ag.keywords, keyword],
-                      updatedAt: new Date().toISOString(),
-                    }
-                  : ag
-              ),
-            }
-          : c
-      ),
-    }));
+  addKeyword: async (campaignId, adGroupId, keyword) => {
+    await syncAdGroupKeywords(campaignId, adGroupId, (keywords) => [
+      ...keywords,
+      keyword,
+    ]);
   },
 
-  updateKeyword: (campaignId, adGroupId, keywordId, updates) => {
-    set((state) => ({
-      campaigns: state.campaigns.map((c) =>
-        c.id === campaignId
-          ? {
-              ...c,
-              adGroups: c.adGroups.map((ag) =>
-                ag.id === adGroupId
-                  ? {
-                      ...ag,
-                      keywords: ag.keywords.map((k) =>
-                        k.id === keywordId ? { ...k, ...updates } : k
-                      ),
-                      updatedAt: new Date().toISOString(),
-                    }
-                  : ag
-              ),
-            }
-          : c
-      ),
-    }));
+  updateKeyword: async (campaignId, adGroupId, keywordId, updates) => {
+    if (!updates || Object.keys(updates).length === 0) {
+      return;
+    }
+
+    await syncAdGroupKeywords(campaignId, adGroupId, (keywords) =>
+      keywords.map((k) => (k.id === keywordId ? { ...k, ...updates } : k))
+    );
   },
 
-  deleteKeyword: (campaignId, adGroupId, keywordId) => {
-    set((state) => ({
-      campaigns: state.campaigns.map((c) =>
-        c.id === campaignId
-          ? {
-              ...c,
-              adGroups: c.adGroups.map((ag) =>
-                ag.id === adGroupId
-                  ? {
-                      ...ag,
-                      keywords: ag.keywords.filter((k) => k.id !== keywordId),
-                      updatedAt: new Date().toISOString(),
-                    }
-                  : ag
-              ),
-            }
-          : c
-      ),
-    }));
+  deleteKeyword: async (campaignId, adGroupId, keywordId) => {
+    await syncAdGroupKeywords(campaignId, adGroupId, (keywords) =>
+      keywords.filter((k) => k.id !== keywordId)
+    );
   },
 
   // Bulk Keyword Operations
-  addKeywords: (campaignId, adGroupId, keywords) => {
-    set((state) => ({
-      campaigns: state.campaigns.map((c) =>
-        c.id === campaignId
-          ? {
-              ...c,
-              adGroups: c.adGroups.map((ag) =>
-                ag.id === adGroupId
-                  ? {
-                      ...ag,
-                      keywords: [...ag.keywords, ...keywords],
-                      updatedAt: new Date().toISOString(),
-                    }
-                  : ag
-              ),
-            }
-          : c
-      ),
-    }));
+  addKeywords: async (campaignId, adGroupId, keywords) => {
+    if (!keywords.length) {
+      return;
+    }
+
+    await syncAdGroupKeywords(campaignId, adGroupId, (existingKeywords) => [
+      ...existingKeywords,
+      ...keywords,
+    ]);
   },
 
   // Ad CRUD
@@ -745,6 +777,7 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
       ),
     }));
   },
-}));
+  };
+});
 
 export default useCampaignStore;
