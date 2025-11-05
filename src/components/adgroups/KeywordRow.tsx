@@ -1,19 +1,67 @@
+import React, { useEffect, useState } from 'react';
 import type { Keyword } from '@/types';
 
 export interface KeywordRowProps {
   keyword: Keyword;
-  onUpdate: (updates: Partial<Keyword>) => void;
-  onDelete: () => void;
+  onUpdate: (updates: Partial<Keyword>) => Promise<void> | void;
+  onDelete: () => Promise<void> | void;
 }
 
 const KeywordRow: React.FC<KeywordRowProps> = ({ keyword, onUpdate, onDelete }) => {
+  const [textValue, setTextValue] = useState(keyword.text);
+  const [maxCpcValue, setMaxCpcValue] = useState(
+    typeof keyword.maxCpc === 'number' ? keyword.maxCpc.toString() : ''
+  );
+
+  useEffect(() => {
+    setTextValue(keyword.text);
+  }, [keyword.text]);
+
+  useEffect(() => {
+    setMaxCpcValue(
+      typeof keyword.maxCpc === 'number' ? keyword.maxCpc.toString() : ''
+    );
+  }, [keyword.maxCpc]);
+
+  useEffect(() => {
+    const handler = window.setTimeout(() => {
+      if (textValue !== keyword.text) {
+        void Promise.resolve(onUpdate({ text: textValue })).catch(() => undefined);
+      }
+    }, 400);
+
+    return () => window.clearTimeout(handler);
+  }, [textValue, keyword.text, onUpdate]);
+
+  useEffect(() => {
+    const handler = window.setTimeout(() => {
+      if (maxCpcValue === '') {
+        if (keyword.maxCpc !== undefined) {
+          void Promise.resolve(onUpdate({ maxCpc: undefined })).catch(() => undefined);
+        }
+        return;
+      }
+
+      const parsed = parseFloat(maxCpcValue);
+      if (Number.isNaN(parsed)) {
+        return;
+      }
+
+      if (parsed !== keyword.maxCpc) {
+        void Promise.resolve(onUpdate({ maxCpc: parsed })).catch(() => undefined);
+      }
+    }, 400);
+
+    return () => window.clearTimeout(handler);
+  }, [maxCpcValue, keyword.maxCpc, onUpdate]);
+
   return (
     <div className="flex items-center space-x-3 py-2 border-b border-gray-100 last:border-0">
       {/* Keyword Text */}
       <input
         type="text"
-        value={keyword.text}
-        onChange={(e) => onUpdate({ text: e.target.value })}
+        value={textValue}
+        onChange={(e) => setTextValue(e.target.value)}
         className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         placeholder="Enter keyword"
       />
@@ -25,10 +73,8 @@ const KeywordRow: React.FC<KeywordRowProps> = ({ keyword, onUpdate, onDelete }) 
           type="number"
           step="0.01"
           min="0"
-          value={keyword.maxCpc || ''}
-          onChange={(e) =>
-            onUpdate({ maxCpc: e.target.value ? parseFloat(e.target.value) : undefined })
-          }
+          value={maxCpcValue}
+          onChange={(e) => setMaxCpcValue(e.target.value)}
           className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           placeholder="Auto"
         />
@@ -36,7 +82,9 @@ const KeywordRow: React.FC<KeywordRowProps> = ({ keyword, onUpdate, onDelete }) 
 
       {/* Delete Button */}
       <button
-        onClick={onDelete}
+        onClick={() => {
+          void Promise.resolve(onDelete()).catch(() => undefined);
+        }}
         className="text-gray-400 hover:text-red-600 transition-colors"
         title="Delete keyword"
         aria-label="Delete keyword"

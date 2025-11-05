@@ -115,7 +115,7 @@ const AdGroupBuilder = () => {
   }, []);
 
   const handleAddKeywordsFromResearch = useCallback(
-    (
+    async (
       keywords: Array<{
         text: string;
         matchTypes: MatchTypeSettings;
@@ -123,14 +123,18 @@ const AdGroupBuilder = () => {
     ) => {
       if (!campaignId || !adGroupId) return;
 
-      // Convert research keywords to Keyword entities
       const keywordsToAdd: Keyword[] = keywords.map((kw) => ({
         id: `kw-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         text: kw.text,
       }));
 
-      addKeywords(campaignId, adGroupId, keywordsToAdd);
-      toast.success(`Added ${keywords.length} keyword${keywords.length !== 1 ? 's' : ''} to ad group`);
+      try {
+        await addKeywords(campaignId, adGroupId, keywordsToAdd);
+        toast.success(`Added ${keywords.length} keyword${keywords.length !== 1 ? 's' : ''} to ad group`);
+      } catch (error: any) {
+        console.error('Failed to add researched keywords:', error);
+        toast.error(error.message || 'Failed to add researched keywords. Please try again.');
+      }
     },
     [campaignId, adGroupId, addKeywords, toast]
   );
@@ -163,13 +167,49 @@ const AdGroupBuilder = () => {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [adGroup, selectedAdIds, handleSelectAll, handleClearSelection, handleBulkDelete, handleOpenKeywordResearch]);
 
-  const handleAddKeyword = () => {
+  const handleAddKeyword = useCallback(async () => {
+    if (!campaignId || !adGroupId) return;
+
     const newKeyword: Keyword = {
       id: `kw-${Date.now()}`,
       text: '',
     };
-    addKeyword(campaignId!, adGroupId!, newKeyword);
-  };
+
+    try {
+      await addKeyword(campaignId, adGroupId, newKeyword);
+    } catch (error: any) {
+      console.error('Failed to add keyword:', error);
+      toast.error(error.message || 'Failed to add keyword. Please try again.');
+    }
+  }, [campaignId, adGroupId, addKeyword, toast]);
+
+  const handleUpdateKeyword = useCallback(
+    async (keywordId: string, updates: Partial<Keyword>) => {
+      if (!campaignId || !adGroupId) return;
+
+      try {
+        await updateKeyword(campaignId, adGroupId, keywordId, updates);
+      } catch (error: any) {
+        console.error(`Failed to update keyword ${keywordId}:`, error);
+        toast.error(error.message || 'Failed to update keyword. Changes were reverted.');
+      }
+    },
+    [campaignId, adGroupId, updateKeyword, toast]
+  );
+
+  const handleDeleteKeyword = useCallback(
+    async (keywordId: string) => {
+      if (!campaignId || !adGroupId) return;
+
+      try {
+        await deleteKeyword(campaignId, adGroupId, keywordId);
+      } catch (error: any) {
+        console.error(`Failed to delete keyword ${keywordId}:`, error);
+        toast.error(error.message || 'Failed to delete keyword. Please try again.');
+      }
+    },
+    [campaignId, adGroupId, deleteKeyword, toast]
+  );
 
   const handleAdClick = (adId: string) => {
     navigate(`/campaigns/${campaignId}/ad-groups/${adGroupId}/ads/${adId}`);
@@ -239,12 +279,8 @@ const AdGroupBuilder = () => {
         <KeywordManager
           keywords={adGroup.keywords}
           onAddKeyword={handleAddKeyword}
-          onUpdateKeyword={(keywordId, updates) =>
-            updateKeyword(campaignId!, adGroupId!, keywordId, updates)
-          }
-          onDeleteKeyword={(keywordId) =>
-            deleteKeyword(campaignId!, adGroupId!, keywordId)
-          }
+          onUpdateKeyword={handleUpdateKeyword}
+          onDeleteKeyword={handleDeleteKeyword}
           onResearchKeywords={handleOpenKeywordResearch}
         />
 

@@ -5,9 +5,9 @@ import KeywordResearchButton from '@/components/keywords/KeywordResearchButton';
 
 export interface KeywordManagerProps {
   keywords: Keyword[];
-  onAddKeyword: () => void;
-  onUpdateKeyword: (keywordId: string, updates: Partial<Keyword>) => void;
-  onDeleteKeyword: (keywordId: string) => void;
+  onAddKeyword: () => Promise<void> | void;
+  onUpdateKeyword: (keywordId: string, updates: Partial<Keyword>) => Promise<void> | void;
+  onDeleteKeyword: (keywordId: string) => Promise<void> | void;
   onResearchKeywords?: () => void;
 }
 
@@ -37,7 +37,7 @@ const KeywordManager: React.FC<KeywordManagerProps> = ({
             <KeywordResearchButton onClick={onResearchKeywords} />
           )}
           <button
-            onClick={onAddKeyword}
+            onClick={() => void onAddKeyword()}
             className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center space-x-1 transition-colors"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -59,7 +59,7 @@ const KeywordManager: React.FC<KeywordManagerProps> = ({
               key={keyword.id}
               keyword={keyword}
               onUpdate={(updates) => onUpdateKeyword(keyword.id, updates)}
-              onDelete={() => onDeleteKeyword(keyword.id)}
+              onDelete={() => void onDeleteKeyword(keyword.id)}
             />
           ))}
         </div>
