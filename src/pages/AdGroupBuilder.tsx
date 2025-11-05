@@ -81,19 +81,35 @@ const AdGroupBuilder = () => {
     setIsDeleteModalOpen(true);
   }, []);
 
-  const handleConfirmDelete = useCallback(() => {
-    if (campaignId && adGroupId) {
-      deleteAds(campaignId, adGroupId, selectedAdIds);
+  const handleConfirmDelete = useCallback(async () => {
+    if (!campaignId || !adGroupId || selectedAdIds.length === 0) {
+      return;
+    }
+
+    try {
+      await deleteAds(campaignId, adGroupId, selectedAdIds);
       toast.success(`${selectedAdIds.length} ad${selectedAdIds.length !== 1 ? 's' : ''} deleted`);
       setSelectedAdIds([]);
+    } catch (error) {
+      console.error('Failed to delete ads:', error);
+      toast.error('Failed to delete selected ads. Please try again.');
+      throw error;
     }
   }, [campaignId, adGroupId, selectedAdIds, deleteAds, toast]);
 
-  const handleBulkDuplicate = useCallback(() => {
-    if (campaignId && adGroupId) {
-      duplicateAds(campaignId, adGroupId, selectedAdIds);
+  const handleBulkDuplicate = useCallback(async () => {
+    if (!campaignId || !adGroupId || selectedAdIds.length === 0) {
+      return;
+    }
+
+    try {
+      await duplicateAds(campaignId, adGroupId, selectedAdIds);
       toast.success(`${selectedAdIds.length} ad${selectedAdIds.length !== 1 ? 's' : ''} duplicated`);
       setSelectedAdIds([]);
+    } catch (error) {
+      console.error('Failed to duplicate ads:', error);
+      toast.error('Failed to duplicate selected ads. Please try again.');
+      throw error;
     }
   }, [campaignId, adGroupId, selectedAdIds, duplicateAds, toast]);
 
@@ -101,13 +117,29 @@ const AdGroupBuilder = () => {
     setIsStatusModalOpen(true);
   }, []);
 
-  const handleConfirmChangeStatus = useCallback((status: string) => {
-    if (campaignId && adGroupId) {
-      updateAdsStatus(campaignId, adGroupId, selectedAdIds, status as ResponsiveSearchAd['status']);
-      toast.success(`${selectedAdIds.length} ad${selectedAdIds.length !== 1 ? 's' : ''} updated`);
-      setSelectedAdIds([]);
-    }
-  }, [campaignId, adGroupId, selectedAdIds, updateAdsStatus, toast]);
+  const handleConfirmChangeStatus = useCallback(
+    async (status: string) => {
+      if (!campaignId || !adGroupId || selectedAdIds.length === 0) {
+        return;
+      }
+
+      try {
+        await updateAdsStatus(
+          campaignId,
+          adGroupId,
+          selectedAdIds,
+          status as ResponsiveSearchAd['status']
+        );
+        toast.success(`${selectedAdIds.length} ad${selectedAdIds.length !== 1 ? 's' : ''} updated`);
+        setSelectedAdIds([]);
+      } catch (error) {
+        console.error('Failed to update ad statuses:', error);
+        toast.error('Failed to update ad statuses. Please try again.');
+        throw error;
+      }
+    },
+    [campaignId, adGroupId, selectedAdIds, updateAdsStatus, toast]
+  );
 
   // Keyword shortcuts and handlers
   const handleOpenKeywordResearch = useCallback(() => {

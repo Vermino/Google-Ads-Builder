@@ -5,7 +5,13 @@
 
 import { Router, Request, Response } from 'express';
 import { adGroupRepository, campaignRepository, adRepository } from '../db/repositories';
-import type { CreateAdGroupInput, UpdateAdGroupInput, EntityStatus } from '../db/types';
+import type {
+  CreateAdGroupInput,
+  UpdateAdGroupInput,
+  EntityStatus,
+  AdGroup as DbAdGroup,
+  Ad as DbAd,
+} from '../db/types';
 
 const router = Router();
 
@@ -14,6 +20,24 @@ interface APIResponse<T> {
   data: T;
   meta?: any;
   timestamp?: string;
+}
+
+function generateCopyName(baseName: string, existingNames: Set<string>): string {
+  const baseCopy = `${baseName} (Copy)`;
+  if (!existingNames.has(baseCopy)) {
+    existingNames.add(baseCopy);
+    return baseCopy;
+  }
+
+  let counter = 2;
+  while (true) {
+    const candidate = `${baseName} (Copy ${counter})`;
+    if (!existingNames.has(candidate)) {
+      existingNames.add(candidate);
+      return candidate;
+    }
+    counter += 1;
+  }
 }
 
 /**
@@ -351,6 +375,217 @@ router.delete('/:id', async (req: Request, res: Response) => {
       error: {
         code: 'DELETE_FAILED',
         message: 'Failed to delete ad group',
+        details: error.message,
+      },
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+/**
+ * POST /api/ad-groups/bulk/duplicate
+ * Duplicate multiple ad groups (including their ads)
+ */
+router.post('/bulk/duplicate', async (req: Request, res: Response) => {
+  try {
+    const { campaignId, adGroupIds } = req.body as {
+      campaignId?: string;
+      adGroupIds?: string[];
+    };
+
+    if (!campaignId || typeof campaignId !== 'string') {
+      res.status(400).json({
+        success: false,
+        error: {
+          code: 'INVALID_CAMPAIGN_ID',
+          message: 'campaignId must be provided as a string',
+        },
+        timestamp: new Date().toISOString(),
+      });
+      return;
+    }
+
+    if (!Array.isArray(adGroupIds) || adGroupIds.length === 0) {
+      res.status(400).json({
+        success: false,
+        error: {
+          code: 'INVALID_AD_GROUP_IDS',
+          message: 'adGroupIds must be a non-empty array',
+        },
+        timestamp: new Date().toISOString(),
+      });
+      return;
+    }
+
+    const campaign = campaignRepository.findById(campaignId);
+    if (!campaign) {
+      res.status(404).json({
+        success: false,
+        error: {
+          code: 'CAMPAIGN_NOT_FOUND',
+          message: `Campaign with ID ${campaignId} not found`,
+        },
+        timestamp: new Date().toISOString(),
+      });
+      return;
+    }
+
+    const existingNames = new Set(
+      adGroupRepository
+        .findByCampaignId(campaignId)
+        .map((adGroup) => adGroup.name)
+    );
+
+    const duplicates: Array<{ ad_group: DbAdGroup; ads: DbAd[] }> = [];
+
+    for (const id of adGroupIds) {
+      const original = adGroupRepository.findById(id);
+      if (!original || original.campaign_id !== campaignId) {
+        res.status(404).json({
+          success: false,
+          error: {
+            code: 'AD_GROUP_NOT_FOUND',
+            message: `Ad group with ID ${id} not found in campaign ${campaignId}`,
+          },
+          timestamp: new Date().toISOString(),
+        });
+        return;
+      }
+
+      const copyName = generateCopyName(original.name, existingNames);
+      const createdAdGroup = adGroupRepository.create({
+        campaign_id: campaignId,
+        name: copyName,
+        keywords: original.keywords,
+        status: original.status as EntityStatus,
+      });
+
+      const originalAds = adRepository.findByAdGroupId(id);
+      const createdAds = originalAds.map((ad) =>
+        adRepository.create({
+          ad_group_id: createdAdGroup.id,
+          headlines: ad.headlines,
+          descriptions: ad.descriptions,
+          final_url: ad.final_url,
+          status: ad.status as EntityStatus,
+        })
+      );
+
+      duplicates.push({
+        ad_group: createdAdGroup,
+        ads: createdAds,
+      });
+    }
+
+    campaignRepository.touch(campaignId);
+
+    res.status(201).json({
+      success: true,
+      data: duplicates,
+      meta: {
+        count: duplicates.length,
+      },
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error: any) {
+    console.error('[AdGroups] Error duplicating ad groups:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        code: 'DUPLICATE_FAILED',
+        message: 'Failed to duplicate ad groups',
+        details: error.message,
+      },
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+/**
+ * PATCH /api/ad-groups/bulk/status
+ * Update status for multiple ad groups
+ */
+router.patch('/bulk/status', async (req: Request, res: Response) => {
+  try {
+    const { campaignId, adGroupIds, status } = req.body as {
+      campaignId?: string;
+      adGroupIds?: string[];
+      status?: EntityStatus;
+    };
+
+    if (!campaignId || typeof campaignId !== 'string') {
+      res.status(400).json({
+        success: false,
+        error: {
+          code: 'INVALID_CAMPAIGN_ID',
+          message: 'campaignId must be provided as a string',
+        },
+        timestamp: new Date().toISOString(),
+      });
+      return;
+    }
+
+    if (!Array.isArray(adGroupIds) || adGroupIds.length === 0) {
+      res.status(400).json({
+        success: false,
+        error: {
+          code: 'INVALID_AD_GROUP_IDS',
+          message: 'adGroupIds must be a non-empty array',
+        },
+        timestamp: new Date().toISOString(),
+      });
+      return;
+    }
+
+    const validStatuses: EntityStatus[] = ['active', 'paused', 'draft'];
+    if (!status || !validStatuses.includes(status)) {
+      res.status(400).json({
+        success: false,
+        error: {
+          code: 'INVALID_STATUS',
+          message: `Status must be one of: ${validStatuses.join(', ')}`,
+        },
+        timestamp: new Date().toISOString(),
+      });
+      return;
+    }
+
+    const invalidIds = adGroupIds.filter((id) => {
+      const adGroup = adGroupRepository.findById(id);
+      return !adGroup || adGroup.campaign_id !== campaignId;
+    });
+
+    if (invalidIds.length > 0) {
+      res.status(404).json({
+        success: false,
+        error: {
+          code: 'AD_GROUP_NOT_FOUND',
+          message: `Some ad groups were not found in campaign ${campaignId}`,
+          details: { invalidIds },
+        },
+        timestamp: new Date().toISOString(),
+      });
+      return;
+    }
+
+    const updatedAdGroups = adGroupRepository.updateStatusBulk(adGroupIds, status);
+    campaignRepository.touch(campaignId);
+
+    res.json({
+      success: true,
+      data: updatedAdGroups,
+      meta: {
+        updated: updatedAdGroups.length,
+      },
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error: any) {
+    console.error('[AdGroups] Error updating ad group status:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        code: 'BULK_STATUS_FAILED',
+        message: 'Failed to update ad group statuses',
         details: error.message,
       },
       timestamp: new Date().toISOString(),

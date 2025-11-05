@@ -4,7 +4,7 @@
  */
 
 import { getDatabase } from '../database';
-import type { Ad, CreateAdInput, UpdateAdInput, HeadlineWithCategory } from '../types';
+import type { Ad, CreateAdInput, UpdateAdInput, HeadlineWithCategory, EntityStatus } from '../types';
 import { nanoid } from 'nanoid';
 
 // Database row type (headlines and descriptions stored as JSON strings)
@@ -206,6 +206,51 @@ export class AdRepository {
     const result = stmt.get(campaignId) as { count: number };
 
     return result.count;
+  }
+
+  /**
+   * Bulk update status values for the provided ad IDs
+   */
+  updateStatusBulk(ids: string[], status: EntityStatus): Ad[] {
+    if (ids.length === 0) {
+      return [];
+    }
+
+    const db = getDatabase();
+    const now = new Date().toISOString();
+    const placeholders = ids.map(() => '?').join(', ');
+
+    const updateStmt = db.prepare(
+      `UPDATE ads SET status = ?, updated_at = ? WHERE id IN (${placeholders})`
+    );
+    updateStmt.run(status, now, ...ids);
+
+    const selectStmt = db.prepare(
+      `SELECT * FROM ads WHERE id IN (${placeholders})`
+    );
+    const rows = selectStmt.all(...ids) as AdRow[];
+
+    return rows.map(row => this.rowToAd(row));
+  }
+
+  /**
+   * Update only the updated_at timestamp for an ad
+   */
+  touch(id: string): Ad | null {
+    const db = getDatabase();
+
+    const stmt = db.prepare(
+      `UPDATE ads SET updated_at = ? WHERE id = ?`
+    );
+
+    const now = new Date().toISOString();
+    const result = stmt.run(now, id);
+
+    if (result.changes === 0) {
+      return null;
+    }
+
+    return this.findById(id);
   }
 }
 

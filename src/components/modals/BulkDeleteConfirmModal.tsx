@@ -1,11 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Modal from '@/components/common/Modal';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Loader2 } from 'lucide-react';
 
 export interface BulkDeleteConfirmModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: () => void;
+  onConfirm: () => Promise<void> | void;
   itemCount: number;
   itemNames: string[];
   entityType: 'ad group' | 'ad';
@@ -19,12 +19,20 @@ const BulkDeleteConfirmModal: React.FC<BulkDeleteConfirmModalProps> = ({
   itemNames,
   entityType,
 }) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const displayNames = itemNames.slice(0, 5);
   const remainingCount = itemCount - displayNames.length;
 
-  const handleConfirm = () => {
-    onConfirm();
-    onClose();
+  const handleConfirm = async () => {
+    try {
+      setIsSubmitting(true);
+      await onConfirm();
+      onClose();
+    } catch (error) {
+      console.error('Bulk deletion failed:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -37,15 +45,24 @@ const BulkDeleteConfirmModal: React.FC<BulkDeleteConfirmModalProps> = ({
         <>
           <button
             onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors"
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={isSubmitting}
           >
             Cancel
           </button>
           <button
             onClick={handleConfirm}
-            className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
+            className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={isSubmitting}
           >
-            Delete {entityType}{itemCount !== 1 ? 's' : ''}
+            {isSubmitting ? (
+              <span className="flex items-center">
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Deleting...
+              </span>
+            ) : (
+              <>Delete {entityType}{itemCount !== 1 ? 's' : ''}</>
+            )}
           </button>
         </>
       }

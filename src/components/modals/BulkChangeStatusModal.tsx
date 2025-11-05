@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import Modal from '@/components/common/Modal';
-import { Circle, CirclePause, X } from 'lucide-react';
+import { Circle, CirclePause, X, Loader2 } from 'lucide-react';
 
 export interface BulkChangeStatusModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: (status: string) => void;
+  onConfirm: (status: string) => Promise<void> | void;
   itemCount: number;
   itemNames: string[];
   entityType: 'ad group' | 'ad';
@@ -39,9 +39,18 @@ const BulkChangeStatusModal: React.FC<BulkChangeStatusModalProps> = ({
         { value: 'disabled', label: 'Disabled', icon: X, color: 'text-red-600' },
       ];
 
-  const handleConfirm = () => {
-    onConfirm(selectedStatus);
-    onClose();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleConfirm = async () => {
+    try {
+      setIsSubmitting(true);
+      await onConfirm(selectedStatus);
+      onClose();
+    } catch (error) {
+      console.error('Bulk status update failed:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -54,15 +63,24 @@ const BulkChangeStatusModal: React.FC<BulkChangeStatusModalProps> = ({
         <>
           <button
             onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors"
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={isSubmitting}
           >
             Cancel
           </button>
           <button
             onClick={handleConfirm}
-            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={isSubmitting}
           >
-            Change Status
+            {isSubmitting ? (
+              <span className="flex items-center">
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Updating...
+              </span>
+            ) : (
+              'Change Status'
+            )}
           </button>
         </>
       }
@@ -89,6 +107,7 @@ const BulkChangeStatusModal: React.FC<BulkChangeStatusModalProps> = ({
                         : 'border-gray-200 bg-white hover:border-gray-300'
                     }
                   `}
+                  disabled={isSubmitting}
                 >
                   <div
                     className={`

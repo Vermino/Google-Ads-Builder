@@ -60,13 +60,26 @@ interface CampaignStore {
 
   // Bulk Ad Group Operations
   deleteAdGroups: (campaignId: string, adGroupIds: string[]) => Promise<void>;
-  duplicateAdGroups: (campaignId: string, adGroupIds: string[]) => void;
-  updateAdGroupsStatus: (campaignId: string, adGroupIds: string[], status: AdGroup['status']) => void;
+  duplicateAdGroups: (campaignId: string, adGroupIds: string[]) => Promise<void>;
+  updateAdGroupsStatus: (
+    campaignId: string,
+    adGroupIds: string[],
+    status: AdGroup['status']
+  ) => Promise<void>;
 
   // Bulk Ad Operations
   deleteAds: (campaignId: string, adGroupId: string, adIds: string[]) => Promise<void>;
-  duplicateAds: (campaignId: string, adGroupId: string, adIds: string[]) => void;
-  updateAdsStatus: (campaignId: string, adGroupId: string, adIds: string[], status: ResponsiveSearchAd['status']) => void;
+  duplicateAds: (
+    campaignId: string,
+    adGroupId: string,
+    adIds: string[]
+  ) => Promise<void>;
+  updateAdsStatus: (
+    campaignId: string,
+    adGroupId: string,
+    adIds: string[],
+    status: ResponsiveSearchAd['status']
+  ) => Promise<void>;
 }
 
 export const useCampaignStore = create<CampaignStore>((set, get) => ({
@@ -601,53 +614,32 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
     }
   },
 
-  duplicateAdGroups: (campaignId, adGroupIds) => {
-    set((state) => ({
-      campaigns: state.campaigns.map((c) => {
-        if (c.id !== campaignId) return c;
+  duplicateAdGroups: async (campaignId, adGroupIds) => {
+    if (!adGroupIds.length) {
+      return;
+    }
 
-        const adGroupsToDuplicate = c.adGroups.filter((ag) => adGroupIds.includes(ag.id));
-        const duplicates = adGroupsToDuplicate.map((ag) => ({
-          ...ag,
-          id: `ag-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          name: `${ag.name} (Copy)`,
-          ads: ag.ads.map((ad) => ({
-            ...ad,
-            id: `ad-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          })),
-          keywords: ag.keywords.map((kw) => ({
-            ...kw,
-            id: `kw-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          })),
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        }));
-
-        return {
-          ...c,
-          adGroups: [...c.adGroups, ...duplicates],
-          updatedAt: new Date().toISOString(),
-        };
-      }),
-    }));
+    try {
+      await campaignService.duplicateAdGroups(campaignId, adGroupIds);
+      await get().refreshCampaign(campaignId);
+    } catch (error: any) {
+      console.error('Failed to duplicate ad groups:', error);
+      throw error;
+    }
   },
 
-  updateAdGroupsStatus: (campaignId, adGroupIds, status) => {
-    set((state) => ({
-      campaigns: state.campaigns.map((c) =>
-        c.id === campaignId
-          ? {
-              ...c,
-              adGroups: c.adGroups.map((ag) =>
-                adGroupIds.includes(ag.id)
-                  ? { ...ag, status, updatedAt: new Date().toISOString() }
-                  : ag
-              ),
-              updatedAt: new Date().toISOString(),
-            }
-          : c
-      ),
-    }));
+  updateAdGroupsStatus: async (campaignId, adGroupIds, status) => {
+    if (!adGroupIds.length) {
+      return;
+    }
+
+    try {
+      await campaignService.updateAdGroupsStatus(campaignId, adGroupIds, status);
+      await get().refreshCampaign(campaignId);
+    } catch (error: any) {
+      console.error('Failed to update ad group statuses:', error);
+      throw error;
+    }
   },
 
   // Bulk Ad Operations
@@ -681,69 +673,32 @@ export const useCampaignStore = create<CampaignStore>((set, get) => ({
     }
   },
 
-  duplicateAds: (campaignId, adGroupId, adIds) => {
-    set((state) => ({
-      campaigns: state.campaigns.map((c) => {
-        if (c.id !== campaignId) return c;
+  duplicateAds: async (campaignId, adGroupId, adIds) => {
+    if (!adIds.length) {
+      return;
+    }
 
-        return {
-          ...c,
-          adGroups: c.adGroups.map((ag) => {
-            if (ag.id !== adGroupId) return ag;
-
-            const adsToDuplicate = ag.ads.filter((ad) => adIds.includes(ad.id));
-            const duplicates = adsToDuplicate.map((ad) => ({
-              ...ad,
-              id: `ad-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-              name: `${ad.name} (Copy)`,
-              headlines: ad.headlines.map((h) => ({
-                ...h,
-                id: `hl-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-              })),
-              descriptions: ad.descriptions.map((d) => ({
-                ...d,
-                id: `desc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-              })),
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-            }));
-
-            return {
-              ...ag,
-              ads: [...ag.ads, ...duplicates],
-              updatedAt: new Date().toISOString(),
-            };
-          }),
-          updatedAt: new Date().toISOString(),
-        };
-      }),
-    }));
+    try {
+      await campaignService.duplicateAds(campaignId, adGroupId, adIds);
+      await get().refreshCampaign(campaignId);
+    } catch (error: any) {
+      console.error('Failed to duplicate ads:', error);
+      throw error;
+    }
   },
 
-  updateAdsStatus: (campaignId, adGroupId, adIds, status) => {
-    set((state) => ({
-      campaigns: state.campaigns.map((c) =>
-        c.id === campaignId
-          ? {
-              ...c,
-              adGroups: c.adGroups.map((ag) =>
-                ag.id === adGroupId
-                  ? {
-                      ...ag,
-                      ads: ag.ads.map((ad) =>
-                        adIds.includes(ad.id)
-                          ? { ...ad, status, updatedAt: new Date().toISOString() }
-                          : ad
-                      ),
-                      updatedAt: new Date().toISOString(),
-                    }
-                  : ag
-              ),
-              updatedAt: new Date().toISOString(),
-            }
-          : c
-      ),
-    }));
+  updateAdsStatus: async (campaignId, adGroupId, adIds, status) => {
+    if (!adIds.length) {
+      return;
+    }
+
+    try {
+      await campaignService.updateAdsStatus(campaignId, adGroupId, adIds, status);
+      await get().refreshCampaign(campaignId);
+    } catch (error: any) {
+      console.error('Failed to update ad statuses:', error);
+      throw error;
+    }
   },
 }));
 

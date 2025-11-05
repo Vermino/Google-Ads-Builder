@@ -4,7 +4,7 @@
  */
 
 import { getDatabase } from '../database';
-import type { AdGroup, CreateAdGroupInput, UpdateAdGroupInput } from '../types';
+import type { AdGroup, CreateAdGroupInput, UpdateAdGroupInput, EntityStatus } from '../types';
 import { nanoid } from 'nanoid';
 
 // Database row type (keywords stored as JSON string)
@@ -197,6 +197,51 @@ export class AdGroupRepository {
     const rows = stmt.all(`%${query}%`) as AdGroupRow[];
 
     return rows.map(row => this.rowToAdGroup(row));
+  }
+
+  /**
+   * Bulk update status values for the provided ad group IDs
+   */
+  updateStatusBulk(ids: string[], status: EntityStatus): AdGroup[] {
+    if (ids.length === 0) {
+      return [];
+    }
+
+    const db = getDatabase();
+    const now = new Date().toISOString();
+    const placeholders = ids.map(() => '?').join(', ');
+
+    const updateStmt = db.prepare(
+      `UPDATE ad_groups SET status = ?, updated_at = ? WHERE id IN (${placeholders})`
+    );
+    updateStmt.run(status, now, ...ids);
+
+    const selectStmt = db.prepare(
+      `SELECT * FROM ad_groups WHERE id IN (${placeholders})`
+    );
+    const rows = selectStmt.all(...ids) as AdGroupRow[];
+
+    return rows.map(row => this.rowToAdGroup(row));
+  }
+
+  /**
+   * Update only the updated_at timestamp for an ad group
+   */
+  touch(id: string): AdGroup | null {
+    const db = getDatabase();
+
+    const stmt = db.prepare(
+      `UPDATE ad_groups SET updated_at = ? WHERE id = ?`
+    );
+
+    const now = new Date().toISOString();
+    const result = stmt.run(now, id);
+
+    if (result.changes === 0) {
+      return null;
+    }
+
+    return this.findById(id);
   }
 }
 

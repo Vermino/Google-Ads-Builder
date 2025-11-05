@@ -235,6 +235,26 @@ export class CampaignRepository {
     const rows = stmt.all(`%${query}%`) as CampaignRow[];
     return rows.map(row => this.rowToCampaign(row));
   }
+
+  /**
+   * Update only the updated_at timestamp for a campaign
+   */
+  touch(id: string): Campaign | null {
+    const db = getDatabase();
+
+    const stmt = db.prepare(
+      `UPDATE campaigns SET updated_at = ? WHERE id = ?`
+    );
+
+    const now = new Date().toISOString();
+    const result = stmt.run(now, id);
+
+    if (result.changes === 0) {
+      return null;
+    }
+
+    return this.findById(id);
+  }
 }
 
 export default new CampaignRepository();
