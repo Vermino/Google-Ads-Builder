@@ -49,6 +49,14 @@ export default function ScriptSetup() {
       localStorage.setItem('googleAdsAccountId', newAccountId);
     }
 
+    // Load saved Google Sheets connection
+    const savedSheetId = localStorage.getItem('googleSpreadsheetId');
+    const savedSheetUrl = localStorage.getItem('googleSpreadsheetUrl');
+    if (savedSheetId && savedSheetUrl) {
+      setSpreadsheetId(savedSheetId);
+      setSpreadsheetUrl(savedSheetUrl);
+    }
+
     // Listen for OAuth callback from popup
     const handleMessage = (event: MessageEvent) => {
       // Verify origin for security (adjust for production)
@@ -167,7 +175,16 @@ export default function ScriptSetup() {
         const data = await response.json();
         setSpreadsheetId(data.spreadsheetId);
         setSpreadsheetUrl(data.spreadsheetUrl);
-        alert('✅ Google Sheet created successfully! The Sheet ID has been filled in automatically.');
+
+        // Save to localStorage for persistence
+        localStorage.setItem('googleSheetsConnected', 'true');
+        localStorage.setItem('googleSpreadsheetId', data.spreadsheetId);
+        localStorage.setItem('googleSpreadsheetUrl', data.spreadsheetUrl);
+
+        // Show success message with confetti effect
+        alert('✅ Google Sheet created successfully!\n\n' +
+              'Your Google Sheet has been created and configured.\n' +
+              'The Sheet ID has been filled in automatically.');
       } else {
         const error = await response.json();
         alert('Error creating spreadsheet: ' + error.error);
@@ -176,6 +193,16 @@ export default function ScriptSetup() {
       alert('Error creating spreadsheet: ' + error.message);
     } finally {
       setCreatingSheet(false);
+    }
+  };
+
+  const handleDisconnect = () => {
+    if (confirm('Are you sure you want to disconnect Google Sheets?\n\nYou can reconnect anytime.')) {
+      setSpreadsheetId('');
+      setSpreadsheetUrl('');
+      localStorage.removeItem('googleSheetsConnected');
+      localStorage.removeItem('googleSpreadsheetId');
+      localStorage.removeItem('googleSpreadsheetUrl');
     }
   };
 
@@ -328,6 +355,44 @@ export default function ScriptSetup() {
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Google Sheet ID <span className="text-gray-400">(Optional)</span>
             </label>
+
+            {/* Connection Status Card */}
+            {spreadsheetUrl && (
+              <div className="mb-3 p-4 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start gap-3 flex-1">
+                    <div className="p-2 bg-green-100 rounded-full">
+                      <Check className="w-5 h-5 text-green-600" />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-medium text-green-900">Google Sheets Connected</h4>
+                      <p className="text-sm text-green-700 mt-1">
+                        Your Google Sheet is ready to receive data from the script
+                      </p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <a
+                          href={spreadsheetUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-sm font-medium text-green-700 hover:text-green-800"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                          Open Google Sheet
+                        </a>
+                        <span className="text-green-300">•</span>
+                        <button
+                          onClick={handleDisconnect}
+                          className="text-sm font-medium text-green-700 hover:text-green-800"
+                        >
+                          Disconnect
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="flex gap-2">
               <input
                 type="text"
@@ -337,38 +402,31 @@ export default function ScriptSetup() {
                 placeholder="e.g., 1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms"
                 disabled={creatingSheet}
               />
-              <button
-                onClick={handleConnectGoogleSheets}
-                disabled={creatingSheet}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center gap-2 whitespace-nowrap"
-              >
-                {creatingSheet ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    Creating...
-                  </>
-                ) : (
-                  <>
-                    <ExternalLink className="w-4 h-4" />
-                    Connect Google Sheets
-                  </>
-                )}
-              </button>
+              {!spreadsheetUrl && (
+                <button
+                  onClick={handleConnectGoogleSheets}
+                  disabled={creatingSheet}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center gap-2 whitespace-nowrap"
+                >
+                  {creatingSheet ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Creating...
+                    </>
+                  ) : (
+                    <>
+                      <ExternalLink className="w-4 h-4" />
+                      Connect Google Sheets
+                    </>
+                  )}
+                </button>
+              )}
             </div>
             <p className="text-xs text-gray-500 mt-1">
-              Optional: Click "Connect Google Sheets" to auto-create and configure a spreadsheet
+              {spreadsheetUrl
+                ? 'Sheet ID from your connected Google Sheet (you can also manually enter a different one)'
+                : 'Click "Connect Google Sheets" to auto-create, or manually enter a Sheet ID'}
             </p>
-            {spreadsheetUrl && (
-              <a
-                href={spreadsheetUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 mt-2 text-sm text-blue-600 hover:text-blue-700"
-              >
-                <ExternalLink className="w-3.5 h-3.5" />
-                View your Google Sheet
-              </a>
-            )}
           </div>
 
           <div>
