@@ -34,7 +34,10 @@ initDatabase(dbPath);
 runMigration();
 
 // Middleware
-app.use(helmet());
+// Configure helmet with CSP disabled so we can set custom CSP per route
+app.use(helmet({
+  contentSecurityPolicy: false, // Disable helmet's CSP to allow custom CSP per route
+}));
 app.use(cors({
   origin: config.clientUrl,
   credentials: true,

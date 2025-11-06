@@ -56,6 +56,12 @@ router.get('/callback', async (req, res) => {
     global.tempTokens = global.tempTokens || {};
     (global as any).tempTokens[tokenId] = tokens;
 
+    // Set CSP to allow inline script for this page only
+    res.setHeader(
+      'Content-Security-Policy',
+      "default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline';"
+    );
+
     // Send HTML that closes popup and sends token to parent window
     res.send(`
       <!DOCTYPE html>
@@ -143,7 +149,8 @@ router.get('/callback', async (req, res) => {
                   window.close();
                   // If close didn't work, show manual close message
                   setTimeout(function() {
-                    document.querySelector('p').textContent = 'You can close this window now.';
+                    var p = document.querySelector('p');
+                    if (p) p.textContent = 'You can close this window now.';
                   }, 500);
                 }, 1000);
               } else {
