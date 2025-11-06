@@ -962,9 +962,146 @@ function updateImportStatus(
   `).run(status, entitiesImported, JSON.stringify(errors), importId);
 }
 
+/**
+ * Import campaign data from Google Ads script sync
+ */
+export async function importCampaignsFromScriptData(db: Database, data: any): Promise<void> {
+  // Import campaigns
+  if (data.campaigns) {
+    const campaignStmt = db.prepare(`
+      INSERT OR REPLACE INTO campaigns (id, name, status, budget, start_date, location, final_url, created_at, updated_at)
+      VALUES (?, ?, ?, ?, datetime('now'), 'Script Import', 'https://example.com', datetime('now'), datetime('now'))
+    `);
+
+    for (const campaign of data.campaigns) {
+      campaignStmt.run(
+        campaign.id,
+        campaign.name,
+        campaign.status,
+        campaign.budget
+      );
+    }
+  }
+
+  // Import ad groups
+  if (data.adGroups) {
+    const adGroupStmt = db.prepare(`
+      INSERT OR REPLACE INTO ad_groups (id, campaign_id, name, status, max_cpc, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+    `);
+
+    for (const adGroup of data.adGroups) {
+      adGroupStmt.run(
+        adGroup.id,
+        adGroup.campaignId,
+        adGroup.name,
+        adGroup.status,
+        adGroup.maxCpc
+      );
+    }
+  }
+
+  // Import keywords
+  if (data.keywords) {
+    const keywordStmt = db.prepare(`
+      INSERT OR REPLACE INTO keywords (id, ad_group_id, text, match_type, status, quality_score, max_cpc, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+    `);
+
+    for (const keyword of data.keywords) {
+      keywordStmt.run(
+        keyword.id,
+        keyword.adGroupId,
+        keyword.text,
+        keyword.matchType,
+        keyword.status,
+        keyword.qualityScore,
+        keyword.maxCpc
+      );
+    }
+  }
+}
+
+/**
+ * Import performance data from Google Ads script sync
+ */
+export async function importPerformanceFromScriptData(db: Database, data: any): Promise<void> {
+  const now = new Date();
+  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+  // Import campaign performance
+  if (data.campaigns) {
+    const perfStmt = db.prepare(`
+      INSERT OR REPLACE INTO performance_data (
+        id, entity_type, entity_id, date_range_start, date_range_end,
+        impressions, clicks, cost, conversions, ctr, average_cpc, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+    `);
+
+    for (const campaign of data.campaigns) {
+      if (campaign.impressions > 0 || campaign.clicks > 0) {
+        perfStmt.run(
+          nanoid(),
+          'campaign',
+          campaign.id,
+          thirtyDaysAgo.toISOString(),
+          now.toISOString(),
+          campaign.impressions || 0,
+          campaign.clicks || 0,
+          campaign.cost || 0,
+          campaign.conversions || 0,
+          campaign.ctr || 0,
+          campaign.averageCpc || 0
+        );
+      }
+    }
+  }
+
+  // Import search terms
+  if (data.searchTerms) {
+    const searchTermStmt = db.prepare(`
+      INSERT OR REPLACE INTO search_terms (
+        id, query, campaign_id, ad_group_id, impressions, clicks, cost, conversions,
+        is_negative_candidate, is_positive_candidate, status, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+    `);
+
+    for (const st of data.searchTerms) {
+      // Find campaign and ad group IDs
+      const campaign = data.campaigns?.find((c: any) => c.name === st.campaignName);
+      const adGroup = data.adGroups?.find((ag: any) =>
+        ag.campaignId === campaign?.id && ag.name === st.adGroupName
+      );
+
+      if (campaign && adGroup) {
+        // Simple heuristics for negative/positive candidates
+        const ctr = st.impressions > 0 ? st.clicks / st.impressions : 0;
+        const isNegativeCandidate = st.impressions > 10 && ctr < 0.01 && st.conversions === 0;
+        const isPositiveCandidate = st.impressions > 5 && ctr > 0.03 && st.conversions > 0;
+
+        searchTermStmt.run(
+          nanoid(),
+          st.query,
+          campaign.id,
+          adGroup.id,
+          st.impressions,
+          st.clicks,
+          st.cost,
+          st.conversions,
+          isNegativeCandidate ? 1 : 0,
+          isPositiveCandidate ? 1 : 0,
+          'active'
+        );
+      }
+    }
+  }
+}
+
 export default {
   importFromEditorCSV,
   importFromZip,
   importPerformanceData,
   importSearchTerms,
+  importCampaignsFromScriptData,
+  importPerformanceFromScriptData,
 };

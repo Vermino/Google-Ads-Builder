@@ -7,21 +7,24 @@ import {
   Settings as SettingsIcon,
   Clock,
   Sheet,
-  ArrowLeft
+  ArrowLeft,
+  Code
 } from 'lucide-react';
 import AutomationRules from '../components/automation/AutomationRules';
 import ImportManager from '../components/automation/ImportManager';
 import RecommendationsDashboard from '../components/automation/RecommendationsDashboard';
 import GoogleSheetsSetup from '../components/automation/GoogleSheetsSetup';
 import AutomationHistory from '../components/automation/AutomationHistory';
+import ScriptSetup from '../components/automation/ScriptSetup';
 
-type Tab = 'rules' | 'recommendations' | 'import' | 'sheets' | 'history';
+type Tab = 'script' | 'rules' | 'recommendations' | 'import' | 'sheets' | 'history';
 
 export default function Automation() {
-  const [activeTab, setActiveTab] = useState<Tab>('rules');
+  const [activeTab, setActiveTab] = useState<Tab>('script');
   const navigate = useNavigate();
 
   const tabs = [
+    { id: 'script' as Tab, label: 'Script Setup', icon: Code },
     { id: 'rules' as Tab, label: 'Automation Rules', icon: Zap },
     { id: 'recommendations' as Tab, label: 'Recommendations', icon: Lightbulb },
     { id: 'import' as Tab, label: 'Import', icon: Upload },
@@ -79,6 +82,7 @@ export default function Automation() {
 
           {/* Tab Content */}
           <div className="p-6">
+            {activeTab === 'script' && <ScriptSetup />}
             {activeTab === 'rules' && <AutomationRules />}
             {activeTab === 'recommendations' && <RecommendationsDashboard />}
             {activeTab === 'import' && <ImportManager />}
