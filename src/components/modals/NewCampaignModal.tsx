@@ -20,7 +20,7 @@ const NewCampaignModal: React.FC<NewCampaignModalProps> = ({ isOpen, onClose }) 
     budget: '100',
     dailyBudget: true,
     location: 'United States',
-    status: 'active' as const,
+    status: 'draft' as const,
     startDate: '',
     endDate: '',
     finalUrl: '',
@@ -104,7 +104,7 @@ const NewCampaignModal: React.FC<NewCampaignModalProps> = ({ isOpen, onClose }) 
       budget: '100',
       dailyBudget: true,
       location: 'United States',
-      status: 'active',
+      status: 'draft',
       startDate: '',
       endDate: '',
       finalUrl: '',
@@ -173,6 +173,7 @@ const NewCampaignModal: React.FC<NewCampaignModalProps> = ({ isOpen, onClose }) 
               onChange={(e) => handleChange('status', e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
+              <option value="draft">Draft</option>
               <option value="active">Active</option>
               <option value="paused">Paused</option>
             </select>

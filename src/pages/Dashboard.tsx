@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Settings, Zap } from 'lucide-react';
+import { Settings, Zap, LayoutGrid, BarChart3 } from 'lucide-react';
 import { useCampaignStore } from '@/stores/useCampaignStore';
 import CampaignList from '@/components/campaigns/CampaignList';
+import CampaignAnalytics from '@/components/dashboard/CampaignAnalytics';
 import ExportButton from '@/components/common/ExportButton';
 import ExportModal from '@/components/common/ExportModal';
 import NewCampaignModal from '@/components/modals/NewCampaignModal';
@@ -11,12 +12,15 @@ import Toast from '@/components/common/Toast';
 import { exportToGoogleAds } from '@/utils/csvExport';
 import type { ExportOptions } from '@/utils/csvExport';
 
+type DashboardTab = 'campaigns' | 'analytics';
+
 const Dashboard = () => {
   const campaigns = useCampaignStore((state) => state.campaigns);
   const loadCampaigns = useCampaignStore((state) => state.loadCampaigns);
   const deleteCampaign = useCampaignStore((state) => state.deleteCampaign);
   const loading = useCampaignStore((state) => state.loading);
   const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState<DashboardTab>('campaigns');
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isNewCampaignModalOpen, setIsNewCampaignModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -141,24 +145,113 @@ const Dashboard = () => {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Your Campaigns</h2>
-          <p className="text-gray-600">Manage your Google Ads campaigns with AI-powered copy generation</p>
+        {/* Tabs */}
+        <div className="mb-6 border-b border-gray-200">
+          <div className="flex gap-8">
+            <button
+              onClick={() => setActiveTab('campaigns')}
+              className={`pb-4 px-2 font-medium transition-colors flex items-center gap-2 ${
+                activeTab === 'campaigns'
+                  ? 'text-blue-600 border-b-2 border-blue-600'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <LayoutGrid className="w-5 h-5" />
+              <span>Campaigns</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('analytics')}
+              className={`pb-4 px-2 font-medium transition-colors flex items-center gap-2 ${
+                activeTab === 'analytics'
+                  ? 'text-blue-600 border-b-2 border-blue-600'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <BarChart3 className="w-5 h-5" />
+              <span>Analytics & Insights</span>
+            </button>
+          </div>
         </div>
 
-        {loading && campaigns.length === 0 ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="text-center">
-              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-              <p className="mt-2 text-gray-600">Loading campaigns...</p>
+        {/* Tab Content */}
+        {activeTab === 'campaigns' && (
+          <>
+            <div className="mb-6">
+              <h2 className="text-xl font-semibold text-gray-900 mb-2">Your Campaigns</h2>
+              <p className="text-gray-600">Manage your Google Ads campaigns with AI-powered copy generation</p>
             </div>
-          </div>
-        ) : (
-          <CampaignList
-            campaigns={campaigns}
-            onCampaignClick={handleCampaignClick}
-            onDelete={handleRequestDeleteCampaign}
-          />
+
+            {loading && campaigns.length === 0 ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="text-center">
+                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  <p className="mt-2 text-gray-600">Loading campaigns...</p>
+                </div>
+              </div>
+            ) : (
+              <CampaignList
+                campaigns={campaigns}
+                onCampaignClick={handleCampaignClick}
+                onDelete={handleRequestDeleteCampaign}
+              />
+            )}
+          </>
+        )}
+
+        {activeTab === 'analytics' && (
+          <>
+            <div className="mb-6">
+              <h2 className="text-xl font-semibold text-gray-900 mb-2">Analytics & Insights</h2>
+              <p className="text-gray-600">Performance metrics, recommendations, and insights for each campaign</p>
+            </div>
+
+            {loading && campaigns.length === 0 ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="text-center">
+                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  <p className="mt-2 text-gray-600">Loading campaigns...</p>
+                </div>
+              </div>
+            ) : campaigns.length === 0 ? (
+              <div className="text-center py-12">
+                <BarChart3 className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No campaigns yet</h3>
+                <p className="text-gray-600 mb-4">Create your first campaign to see analytics and insights</p>
+                <button
+                  onClick={handleNewCampaign}
+                  className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                >
+                  Create Campaign
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {campaigns.map((campaign) => (
+                  <div key={campaign.id} className="bg-white rounded-lg border border-gray-200 p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900">{campaign.name}</h3>
+                        <p className="text-sm text-gray-600 mt-1">
+                          Status: <span className={`font-medium ${
+                            campaign.status === 'active' ? 'text-green-600' :
+                            campaign.status === 'draft' ? 'text-gray-600' :
+                            'text-yellow-600'
+                          }`}>{campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1)}</span>
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => handleCampaignClick(campaign.id)}
+                        className="text-blue-600 hover:text-blue-700 font-medium text-sm"
+                      >
+                        View Campaign →
+                      </button>
+                    </div>
+                    <CampaignAnalytics campaign={campaign} />
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
         )}
       </main>
 

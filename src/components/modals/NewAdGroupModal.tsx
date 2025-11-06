@@ -19,7 +19,7 @@ const NewAdGroupModal: React.FC<NewAdGroupModalProps> = ({ isOpen, onClose, camp
   const [formData, setFormData] = useState({
     name: '',
     maxCpc: '1.00',
-    status: 'active' as const,
+    status: 'draft' as const,
     matchTypes: {
       exact: true,
       phrase: true,
@@ -109,7 +109,7 @@ const NewAdGroupModal: React.FC<NewAdGroupModalProps> = ({ isOpen, onClose, camp
     setFormData({
       name: '',
       maxCpc: '1.00',
-      status: 'active',
+      status: 'draft',
       matchTypes: {
         exact: true,
         phrase: true,

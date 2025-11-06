@@ -55,7 +55,7 @@ export interface AdGroup {
   id: string;
   campaignId: string;
   name: string;
-  status: 'active' | 'paused';
+  status: 'active' | 'paused' | 'draft';
   maxCpc: number;
   matchTypeBidding?: MatchTypeBidModifier; // Optional match type bid adjustments
   keywords: Keyword[];
@@ -75,7 +75,7 @@ export interface GlobalDescription {
 export interface Campaign {
   id: string;
   name: string;
-  status: 'active' | 'paused' | 'ended';
+  status: 'active' | 'paused' | 'draft' | 'ended';
   startDate: string;
   endDate?: string;
   budget: number;

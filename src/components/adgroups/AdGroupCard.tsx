@@ -13,7 +13,10 @@ export interface AdGroupCardProps {
 const AdGroupCard: React.FC<AdGroupCardProps> = ({ adGroup, onClick, onDelete }) => {
   const keywordCount = adGroup.keywords.length;
   const adCount = adGroup.ads.length;
-  const statusVariant = adGroup.status === 'active' ? 'success' : 'default';
+  const statusVariant =
+    adGroup.status === 'active' ? 'success' :
+    adGroup.status === 'draft' ? 'default' :
+    'warning';
 
   return (
     <Card hoverable onClick={onClick} className="transition-transform hover:translate-y-[-2px]">

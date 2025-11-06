@@ -24,7 +24,10 @@ const CampaignCard: React.FC<CampaignCardProps> = ({ campaign, onClick, onDelete
   });
 
   // Get status badge variant
-  const statusVariant = campaign.status === 'active' ? 'success' : 'default';
+  const statusVariant =
+    campaign.status === 'active' ? 'success' :
+    campaign.status === 'draft' ? 'default' :
+    'warning';
 
   return (
     <Card hoverable onClick={onClick} className="transition-transform hover:translate-y-[-2px]">
