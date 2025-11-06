@@ -143,6 +143,7 @@ CREATE TABLE IF NOT EXISTS automation_rules (
   trigger_config TEXT NOT NULL, -- JSON config for trigger (e.g., cron schedule, thresholds)
   action_type TEXT NOT NULL CHECK(action_type IN (
     'apply_recommendations',
+    'generate_recommendations',
     'pause_low_performers',
     'increase_budget',
     'decrease_budget',
@@ -150,7 +151,8 @@ CREATE TABLE IF NOT EXISTS automation_rules (
     'add_keywords',
     'refresh_ads',
     'adjust_bids',
-    'generate_report'
+    'generate_report',
+    'sync_sheets_data'
   )),
   action_config TEXT NOT NULL, -- JSON config for action
   filters TEXT DEFAULT '{}', -- JSON filters (campaigns, ad groups, etc.)
