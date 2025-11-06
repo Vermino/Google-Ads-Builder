@@ -59,10 +59,24 @@ function runMigrations(database: Database.Database): void {
     try {
       // Execute migration in a transaction
       database.transaction(() => {
-        const statements = migration
+        // Remove SQL comments (both -- and /* */ style)
+        let cleanedMigration = migration
+          .split('\n')
+          .map(line => {
+            // Remove inline comments (-- style)
+            const commentIndex = line.indexOf('--');
+            if (commentIndex !== -1) {
+              return line.substring(0, commentIndex);
+            }
+            return line;
+          })
+          .join('\n')
+          .replace(/\/\*[\s\S]*?\*\//g, ''); // Remove /* */ comments
+
+        const statements = cleanedMigration
           .split(';')
           .map(s => s.trim())
-          .filter(s => s.length > 0 && !s.startsWith('--'));
+          .filter(s => s.length > 0);
 
         for (const statement of statements) {
           database.exec(statement);
