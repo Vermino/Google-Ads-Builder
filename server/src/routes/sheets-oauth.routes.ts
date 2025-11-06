@@ -173,47 +173,48 @@ async function setupSheetHeaders(sheets: any, spreadsheetId: string, sheetIds: n
     requests.push({
       updateCells: {
         range: { sheetId: sheetIds[1], startRowIndex: 0, endRowIndex: 1 },
-      rows: [{
-        values: [
-          { userEnteredValue: { stringValue: 'Campaign ID' }, userEnteredFormat: { textFormat: { bold: true } } },
-          { userEnteredValue: { stringValue: 'Name' }, userEnteredFormat: { textFormat: { bold: true } } },
-          { userEnteredValue: { stringValue: 'Status' }, userEnteredFormat: { textFormat: { bold: true } } },
-          { userEnteredValue: { stringValue: 'Budget' }, userEnteredFormat: { textFormat: { bold: true } } },
-          { userEnteredValue: { stringValue: 'Impressions' }, userEnteredFormat: { textFormat: { bold: true } } },
-          { userEnteredValue: { stringValue: 'Clicks' }, userEnteredFormat: { textFormat: { bold: true } } },
-          { userEnteredValue: { stringValue: 'Cost' }, userEnteredFormat: { textFormat: { bold: true } } },
-          { userEnteredValue: { stringValue: 'Conversions' }, userEnteredFormat: { textFormat: { bold: true } } },
-          { userEnteredValue: { stringValue: 'CTR' }, userEnteredFormat: { textFormat: { bold: true } } },
-          { userEnteredValue: { stringValue: 'Avg CPC' }, userEnteredFormat: { textFormat: { bold: true } } }
-        ]
-      }],
-      fields: 'userEnteredValue,userEnteredFormat.textFormat.bold'
-    }
-  });
+        rows: [{
+          values: [
+            { userEnteredValue: { stringValue: 'Campaign ID' }, userEnteredFormat: { textFormat: { bold: true } } },
+            { userEnteredValue: { stringValue: 'Name' }, userEnteredFormat: { textFormat: { bold: true } } },
+            { userEnteredValue: { stringValue: 'Status' }, userEnteredFormat: { textFormat: { bold: true } } },
+            { userEnteredValue: { stringValue: 'Budget' }, userEnteredFormat: { textFormat: { bold: true } } },
+            { userEnteredValue: { stringValue: 'Impressions' }, userEnteredFormat: { textFormat: { bold: true } } },
+            { userEnteredValue: { stringValue: 'Clicks' }, userEnteredFormat: { textFormat: { bold: true } } },
+            { userEnteredValue: { stringValue: 'Cost' }, userEnteredFormat: { textFormat: { bold: true } } },
+            { userEnteredValue: { stringValue: 'Conversions' }, userEnteredFormat: { textFormat: { bold: true } } },
+            { userEnteredValue: { stringValue: 'CTR' }, userEnteredFormat: { textFormat: { bold: true } } },
+            { userEnteredValue: { stringValue: 'Avg CPC' }, userEnteredFormat: { textFormat: { bold: true } } }
+          ]
+        }],
+        fields: 'userEnteredValue,userEnteredFormat.textFormat.bold'
+      }
+    });
+  }
 
   // Keywords sheet headers (third sheet)
   if (sheetIds[2] !== undefined) {
     requests.push({
       updateCells: {
         range: { sheetId: sheetIds[2], startRowIndex: 0, endRowIndex: 1 },
-      rows: [{
-        values: [
-          { userEnteredValue: { stringValue: 'Keyword ID' }, userEnteredFormat: { textFormat: { bold: true } } },
-          { userEnteredValue: { stringValue: 'Campaign' }, userEnteredFormat: { textFormat: { bold: true } } },
-          { userEnteredValue: { stringValue: 'Ad Group' }, userEnteredFormat: { textFormat: { bold: true } } },
-          { userEnteredValue: { stringValue: 'Text' }, userEnteredFormat: { textFormat: { bold: true } } },
-          { userEnteredValue: { stringValue: 'Match Type' }, userEnteredFormat: { textFormat: { bold: true } } },
-          { userEnteredValue: { stringValue: 'Status' }, userEnteredFormat: { textFormat: { bold: true } } },
-          { userEnteredValue: { stringValue: 'QS' }, userEnteredFormat: { textFormat: { bold: true } } },
-          { userEnteredValue: { stringValue: 'Max CPC' }, userEnteredFormat: { textFormat: { bold: true } } },
-          { userEnteredValue: { stringValue: 'Impressions' }, userEnteredFormat: { textFormat: { bold: true } } },
-          { userEnteredValue: { stringValue: 'Clicks' }, userEnteredFormat: { textFormat: { bold: true } } },
-          { userEnteredValue: { stringValue: 'Cost' }, userEnteredFormat: { textFormat: { bold: true } } },
-          { userEnteredValue: { stringValue: 'Conv' }, userEnteredFormat: { textFormat: { bold: true } } },
-          { userEnteredValue: { stringValue: 'CTR' }, userEnteredFormat: { textFormat: { bold: true } } }
-        ]
-      }],
-      fields: 'userEnteredValue,userEnteredFormat.textFormat.bold'
+        rows: [{
+          values: [
+            { userEnteredValue: { stringValue: 'Keyword ID' }, userEnteredFormat: { textFormat: { bold: true } } },
+            { userEnteredValue: { stringValue: 'Campaign' }, userEnteredFormat: { textFormat: { bold: true } } },
+            { userEnteredValue: { stringValue: 'Ad Group' }, userEnteredFormat: { textFormat: { bold: true } } },
+            { userEnteredValue: { stringValue: 'Text' }, userEnteredFormat: { textFormat: { bold: true } } },
+            { userEnteredValue: { stringValue: 'Match Type' }, userEnteredFormat: { textFormat: { bold: true } } },
+            { userEnteredValue: { stringValue: 'Status' }, userEnteredFormat: { textFormat: { bold: true } } },
+            { userEnteredValue: { stringValue: 'QS' }, userEnteredFormat: { textFormat: { bold: true } } },
+            { userEnteredValue: { stringValue: 'Max CPC' }, userEnteredFormat: { textFormat: { bold: true } } },
+            { userEnteredValue: { stringValue: 'Impressions' }, userEnteredFormat: { textFormat: { bold: true } } },
+            { userEnteredValue: { stringValue: 'Clicks' }, userEnteredFormat: { textFormat: { bold: true } } },
+            { userEnteredValue: { stringValue: 'Cost' }, userEnteredFormat: { textFormat: { bold: true } } },
+            { userEnteredValue: { stringValue: 'Conv' }, userEnteredFormat: { textFormat: { bold: true } } },
+            { userEnteredValue: { stringValue: 'CTR' }, userEnteredFormat: { textFormat: { bold: true } } }
+          ]
+        }],
+        fields: 'userEnteredValue,userEnteredFormat.textFormat.bold'
       }
     });
   }
@@ -223,18 +224,18 @@ async function setupSheetHeaders(sheets: any, spreadsheetId: string, sheetIds: n
     requests.push({
       updateCells: {
         range: { sheetId: sheetIds[3], startRowIndex: 0, endRowIndex: 1 },
-      rows: [{
-        values: [
-          { userEnteredValue: { stringValue: 'Query' }, userEnteredFormat: { textFormat: { bold: true } } },
-          { userEnteredValue: { stringValue: 'Campaign' }, userEnteredFormat: { textFormat: { bold: true } } },
-          { userEnteredValue: { stringValue: 'Ad Group' }, userEnteredFormat: { textFormat: { bold: true } } },
-          { userEnteredValue: { stringValue: 'Impressions' }, userEnteredFormat: { textFormat: { bold: true } } },
-          { userEnteredValue: { stringValue: 'Clicks' }, userEnteredFormat: { textFormat: { bold: true } } },
-          { userEnteredValue: { stringValue: 'Cost' }, userEnteredFormat: { textFormat: { bold: true } } },
-          { userEnteredValue: { stringValue: 'Conversions' }, userEnteredFormat: { textFormat: { bold: true } } }
-        ]
-      }],
-      fields: 'userEnteredValue,userEnteredFormat.textFormat.bold'
+        rows: [{
+          values: [
+            { userEnteredValue: { stringValue: 'Query' }, userEnteredFormat: { textFormat: { bold: true } } },
+            { userEnteredValue: { stringValue: 'Campaign' }, userEnteredFormat: { textFormat: { bold: true } } },
+            { userEnteredValue: { stringValue: 'Ad Group' }, userEnteredFormat: { textFormat: { bold: true } } },
+            { userEnteredValue: { stringValue: 'Impressions' }, userEnteredFormat: { textFormat: { bold: true } } },
+            { userEnteredValue: { stringValue: 'Clicks' }, userEnteredFormat: { textFormat: { bold: true } } },
+            { userEnteredValue: { stringValue: 'Cost' }, userEnteredFormat: { textFormat: { bold: true } } },
+            { userEnteredValue: { stringValue: 'Conversions' }, userEnteredFormat: { textFormat: { bold: true } } }
+          ]
+        }],
+        fields: 'userEnteredValue,userEnteredFormat.textFormat.bold'
       }
     });
   }
