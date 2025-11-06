@@ -49,14 +49,24 @@ export default function ScriptSetup() {
       localStorage.setItem('googleAdsAccountId', newAccountId);
     }
 
-    // Check for OAuth callback
-    const urlParams = new URLSearchParams(window.location.search);
-    const tokenId = urlParams.get('sheetsAuth');
-    if (tokenId) {
-      handleOAuthCallback(tokenId);
-      // Clean up URL
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
+    // Listen for OAuth callback from popup
+    const handleMessage = (event: MessageEvent) => {
+      // Verify origin for security (adjust for production)
+      if (event.origin !== window.location.origin && event.origin !== 'http://localhost:3001') {
+        return;
+      }
+
+      if (event.data.type === 'SHEETS_AUTH_SUCCESS') {
+        handleOAuthCallback(event.data.tokenId);
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+
+    // Cleanup listener on unmount
+    return () => {
+      window.removeEventListener('message', handleMessage);
+    };
   }, []);
 
   const loadStatus = async (accId: string) => {

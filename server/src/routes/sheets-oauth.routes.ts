@@ -56,9 +56,26 @@ router.get('/callback', async (req, res) => {
     global.tempTokens = global.tempTokens || {};
     (global as any).tempTokens[tokenId] = tokens;
 
-    // Redirect back to frontend with token ID
-    const frontendUrl = process.env.CLIENT_URL || 'http://localhost:5173';
-    res.redirect(`${frontendUrl}/automation?sheetsAuth=${tokenId}`);
+    // Send HTML that closes popup and sends token to parent window
+    res.send(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Authorization Successful</title>
+        </head>
+        <body>
+          <script>
+            if (window.opener) {
+              window.opener.postMessage({ type: 'SHEETS_AUTH_SUCCESS', tokenId: '${tokenId}' }, '*');
+              window.close();
+            } else {
+              window.location.href = '${process.env.CLIENT_URL || 'http://localhost:5173'}/automation?sheetsAuth=${tokenId}';
+            }
+          </script>
+          <p>Authorization successful! This window should close automatically...</p>
+        </body>
+      </html>
+    `);
   } catch (error: any) {
     console.error('Error in OAuth callback:', error);
     res.status(500).send('Authentication failed: ' + error.message);
@@ -107,8 +124,12 @@ router.post('/create-spreadsheet', async (req, res) => {
     const spreadsheetId = spreadsheet.data.spreadsheetId;
     const spreadsheetUrl = spreadsheet.data.spreadsheetUrl;
 
-    // Set up headers for each sheet
-    await setupSheetHeaders(sheets, spreadsheetId!);
+    // Get the actual sheet IDs from the created spreadsheet
+    const createdSheets = spreadsheet.data.sheets || [];
+    const sheetIds = createdSheets.map((sheet: any) => sheet.properties.sheetId);
+
+    // Set up headers for each sheet using actual IDs
+    await setupSheetHeaders(sheets, spreadsheetId!, sheetIds);
 
     // Clean up token after use
     delete (global as any).tempTokens[tokenId];
@@ -128,27 +149,30 @@ router.post('/create-spreadsheet', async (req, res) => {
 /**
  * Set up headers for each sheet
  */
-async function setupSheetHeaders(sheets: any, spreadsheetId: string) {
+async function setupSheetHeaders(sheets: any, spreadsheetId: string, sheetIds: number[]) {
   const requests = [];
 
-  // Summary sheet headers
-  requests.push({
-    updateCells: {
-      range: { sheetId: 0, startRowIndex: 0, endRowIndex: 1 },
-      rows: [{
-        values: [
-          { userEnteredValue: { stringValue: 'Metric' }, userEnteredFormat: { textFormat: { bold: true } } },
-          { userEnteredValue: { stringValue: 'Value' }, userEnteredFormat: { textFormat: { bold: true } } }
-        ]
-      }],
-      fields: 'userEnteredValue,userEnteredFormat.textFormat.bold'
-    }
-  });
+  // Summary sheet headers (first sheet)
+  if (sheetIds[0] !== undefined) {
+    requests.push({
+      updateCells: {
+        range: { sheetId: sheetIds[0], startRowIndex: 0, endRowIndex: 1 },
+        rows: [{
+          values: [
+            { userEnteredValue: { stringValue: 'Metric' }, userEnteredFormat: { textFormat: { bold: true } } },
+            { userEnteredValue: { stringValue: 'Value' }, userEnteredFormat: { textFormat: { bold: true } } }
+          ]
+        }],
+        fields: 'userEnteredValue,userEnteredFormat.textFormat.bold'
+      }
+    });
+  }
 
-  // Campaigns sheet headers
-  requests.push({
-    updateCells: {
-      range: { sheetId: 1, startRowIndex: 0, endRowIndex: 1 },
+  // Campaigns sheet headers (second sheet)
+  if (sheetIds[1] !== undefined) {
+    requests.push({
+      updateCells: {
+        range: { sheetId: sheetIds[1], startRowIndex: 0, endRowIndex: 1 },
       rows: [{
         values: [
           { userEnteredValue: { stringValue: 'Campaign ID' }, userEnteredFormat: { textFormat: { bold: true } } },
@@ -167,10 +191,11 @@ async function setupSheetHeaders(sheets: any, spreadsheetId: string) {
     }
   });
 
-  // Keywords sheet headers
-  requests.push({
-    updateCells: {
-      range: { sheetId: 2, startRowIndex: 0, endRowIndex: 1 },
+  // Keywords sheet headers (third sheet)
+  if (sheetIds[2] !== undefined) {
+    requests.push({
+      updateCells: {
+        range: { sheetId: sheetIds[2], startRowIndex: 0, endRowIndex: 1 },
       rows: [{
         values: [
           { userEnteredValue: { stringValue: 'Keyword ID' }, userEnteredFormat: { textFormat: { bold: true } } },
@@ -189,13 +214,15 @@ async function setupSheetHeaders(sheets: any, spreadsheetId: string) {
         ]
       }],
       fields: 'userEnteredValue,userEnteredFormat.textFormat.bold'
-    }
-  });
+      }
+    });
+  }
 
-  // SearchTerms sheet headers
-  requests.push({
-    updateCells: {
-      range: { sheetId: 3, startRowIndex: 0, endRowIndex: 1 },
+  // SearchTerms sheet headers (fourth sheet)
+  if (sheetIds[3] !== undefined) {
+    requests.push({
+      updateCells: {
+        range: { sheetId: sheetIds[3], startRowIndex: 0, endRowIndex: 1 },
       rows: [{
         values: [
           { userEnteredValue: { stringValue: 'Query' }, userEnteredFormat: { textFormat: { bold: true } } },
@@ -208,14 +235,17 @@ async function setupSheetHeaders(sheets: any, spreadsheetId: string) {
         ]
       }],
       fields: 'userEnteredValue,userEnteredFormat.textFormat.bold'
-    }
-  });
+      }
+    });
+  }
 
-  // Apply all header updates
-  await sheets.spreadsheets.batchUpdate({
-    spreadsheetId,
-    requestBody: { requests }
-  });
+  // Apply all header updates (only if there are requests)
+  if (requests.length > 0) {
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId,
+      requestBody: { requests }
+    });
+  }
 }
 
 export default router;
