@@ -27,10 +27,12 @@ interface ScriptStatus {
 export default function ScriptSetup() {
   const [accountId, setAccountId] = useState('');
   const [spreadsheetId, setSpreadsheetId] = useState('');
+  const [spreadsheetUrl, setSpreadsheetUrl] = useState('');
   const [backendUrl, setBackendUrl] = useState('http://localhost:3001');
   const [generatedScript, setGeneratedScript] = useState('');
   const [copied, setCopied] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [creatingSheet, setCreatingSheet] = useState(false);
   const [status, setStatus] = useState<ScriptStatus | null>(null);
   const [loadingStatus, setLoadingStatus] = useState(false);
 
@@ -45,6 +47,15 @@ export default function ScriptSetup() {
       const newAccountId = 'account-' + Date.now();
       setAccountId(newAccountId);
       localStorage.setItem('googleAdsAccountId', newAccountId);
+    }
+
+    // Check for OAuth callback
+    const urlParams = new URLSearchParams(window.location.search);
+    const tokenId = urlParams.get('sheetsAuth');
+    if (tokenId) {
+      handleOAuthCallback(tokenId);
+      // Clean up URL
+      window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, []);
 
@@ -104,6 +115,58 @@ export default function ScriptSetup() {
 
   const handleTestConnection = async () => {
     await loadStatus(accountId);
+  };
+
+  const handleConnectGoogleSheets = async () => {
+    try {
+      // Get OAuth URL from backend
+      const response = await fetch('http://localhost:3001/api/sheets-oauth/auth-url');
+      if (response.ok) {
+        const data = await response.json();
+        // Open OAuth popup
+        const width = 600;
+        const height = 700;
+        const left = (window.screen.width - width) / 2;
+        const top = (window.screen.height - height) / 2;
+        window.open(
+          data.authUrl,
+          'Google Sheets Authorization',
+          `width=${width},height=${height},left=${left},top=${top}`
+        );
+      } else {
+        alert('Error getting authorization URL. Make sure Google OAuth is configured in your .env file.');
+      }
+    } catch (error: any) {
+      alert('Error connecting to Google Sheets: ' + error.message);
+    }
+  };
+
+  const handleOAuthCallback = async (tokenId: string) => {
+    setCreatingSheet(true);
+    try {
+      const response = await fetch('http://localhost:3001/api/sheets-oauth/create-spreadsheet', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tokenId,
+          accountId
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setSpreadsheetId(data.spreadsheetId);
+        setSpreadsheetUrl(data.spreadsheetUrl);
+        alert('✅ Google Sheet created successfully! The Sheet ID has been filled in automatically.');
+      } else {
+        const error = await response.json();
+        alert('Error creating spreadsheet: ' + error.error);
+      }
+    } catch (error: any) {
+      alert('Error creating spreadsheet: ' + error.message);
+    } finally {
+      setCreatingSheet(false);
+    }
   };
 
   const formatTimestamp = (timestamp: string | null) => {
@@ -255,16 +318,47 @@ export default function ScriptSetup() {
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Google Sheet ID <span className="text-gray-400">(Optional)</span>
             </label>
-            <input
-              type="text"
-              value={spreadsheetId}
-              onChange={(e) => setSpreadsheetId(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="e.g., 1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms"
-            />
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={spreadsheetId}
+                onChange={(e) => setSpreadsheetId(e.target.value)}
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="e.g., 1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms"
+                disabled={creatingSheet}
+              />
+              <button
+                onClick={handleConnectGoogleSheets}
+                disabled={creatingSheet}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center gap-2 whitespace-nowrap"
+              >
+                {creatingSheet ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <ExternalLink className="w-4 h-4" />
+                    Connect Google Sheets
+                  </>
+                )}
+              </button>
+            </div>
             <p className="text-xs text-gray-500 mt-1">
-              Optional: Sync data to Google Sheets for viewing
+              Optional: Click "Connect Google Sheets" to auto-create and configure a spreadsheet
             </p>
+            {spreadsheetUrl && (
+              <a
+                href={spreadsheetUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 mt-2 text-sm text-blue-600 hover:text-blue-700"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                View your Google Sheet
+              </a>
+            )}
           </div>
 
           <div>

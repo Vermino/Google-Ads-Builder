@@ -14,6 +14,7 @@ import recommendationsRoutes from './routes/recommendations.routes';
 import automationRoutes from './routes/automation.routes';
 import sheetsRoutes from './routes/sheets.routes';
 import scriptRoutes from './routes/script.routes';
+import sheetsOAuthRoutes from './routes/sheets-oauth.routes';
 import { getAvailableProviders } from './services/aiService';
 import { initDatabase } from './db/database';
 import { runMigration } from './db/migrate';
@@ -65,6 +66,7 @@ app.use('/api/recommendations', recommendationsRoutes);
 app.use('/api/automation', automationRoutes);
 app.use('/api/sheets', sheetsRoutes);
 app.use('/api/script', scriptRoutes);
+app.use('/api/sheets-oauth', sheetsOAuthRoutes);
 
 // Error handling
 app.use(errorHandler);
