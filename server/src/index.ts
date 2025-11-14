@@ -6,7 +6,6 @@ import { errorHandler } from './middleware/errorHandler';
 import { apiLimiter } from './middleware/rateLimiter';
 import aiRoutes from './routes/ai.routes';
 import keywordsRoutes from './routes/keywords.routes';
-import claudeRoutes from './routes/claude.routes';
 import campaignRoutes from './routes/campaign.routes';
 import adGroupRoutes from './routes/adGroup.routes';
 import adRoutes from './routes/ad.routes';
@@ -53,7 +52,6 @@ if (config.nodeEnv === 'production') {
 }
 app.use('/api/ai', aiRoutes);
 app.use('/api/keywords', keywordsRoutes);
-app.use('/api/claude', claudeRoutes);
 app.use('/api/campaigns', campaignRoutes);
 app.use('/api/ad-groups', adGroupRoutes);
 app.use('/api/ads', adRoutes);
