@@ -6,6 +6,7 @@
 import { Router, Request, Response } from 'express';
 import { campaignRepository, adGroupRepository } from '../db/repositories';
 import type { CreateCampaignInput, UpdateCampaignInput, EntityStatus } from '../db/types';
+import logger from '../utils/logger.js';
 
 const router = Router();
 
@@ -35,7 +36,7 @@ router.get('/', async (req: Request, res: Response) => {
 
     res.json(response);
   } catch (error: any) {
-    console.error('[Campaigns] Error fetching campaigns:', error);
+    logger.error('[Campaigns] Error fetching campaigns:', error);
     res.status(500).json({
       success: false,
       error: {
@@ -82,7 +83,7 @@ router.get('/search', async (req: Request, res: Response) => {
 
     res.json(response);
   } catch (error: any) {
-    console.error('[Campaigns] Error searching campaigns:', error);
+    logger.error('[Campaigns] Error searching campaigns:', error);
     res.status(500).json({
       success: false,
       error: {
@@ -124,7 +125,7 @@ router.get('/:id', async (req: Request, res: Response) => {
 
     res.json(response);
   } catch (error: any) {
-    console.error('[Campaigns] Error fetching campaign:', error);
+    logger.error('[Campaigns] Error fetching campaign:', error);
     res.status(500).json({
       success: false,
       error: {
@@ -173,7 +174,7 @@ router.get('/:id/ad-groups', async (req: Request, res: Response) => {
 
     res.json(response);
   } catch (error: any) {
-    console.error('[Campaigns] Error fetching ad groups:', error);
+    logger.error('[Campaigns] Error fetching ad groups:', error);
     res.status(500).json({
       success: false,
       error: {
@@ -242,7 +243,7 @@ router.post('/', async (req: Request, res: Response) => {
 
     res.status(201).json(response);
   } catch (error: any) {
-    console.error('[Campaigns] Error creating campaign:', error);
+    logger.error('[Campaigns] Error creating campaign:', error);
     res.status(500).json({
       success: false,
       error: {
@@ -324,7 +325,7 @@ router.put('/:id', async (req: Request, res: Response) => {
 
     res.json(response);
   } catch (error: any) {
-    console.error('[Campaigns] Error updating campaign:', error);
+    logger.error('[Campaigns] Error updating campaign:', error);
     res.status(500).json({
       success: false,
       error: {
@@ -366,7 +367,7 @@ router.delete('/:id', async (req: Request, res: Response) => {
 
     res.json(response);
   } catch (error: any) {
-    console.error('[Campaigns] Error deleting campaign:', error);
+    logger.error('[Campaigns] Error deleting campaign:', error);
     res.status(500).json({
       success: false,
       error: {

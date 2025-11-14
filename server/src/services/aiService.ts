@@ -4,6 +4,7 @@
  */
 
 import { config } from '../config/config';
+import logger from '../utils/logger.js';
 
 export class AIServiceError extends Error {
   code: string;
@@ -120,7 +121,7 @@ async function callGeminiAPI(prompt: string): Promise<string> {
 
   if (!response.ok) {
     const error = await response.text();
-    console.error('[Gemini API Error]', {
+    logger.error('Gemini API Error', {
       status: response.status,
       statusText: response.statusText,
       error: error,
@@ -369,14 +370,17 @@ export async function generateAdCopy(
 
   // Log warnings if any
   if (warnings.length > 0) {
-    console.warn(`⚠️  Ad copy generation warnings (${provider}):`);
-    warnings.forEach(w => console.warn(`   - ${w}`));
+    logger.warn(`Ad copy generation warnings (${provider}):`, { warnings });
   }
 
   // DEBUG: Log what we got from parsing
-  console.log(`📊 Parsed results: ${headlines.length} headlines, ${descriptions.length} descriptions`);
-  console.log(`📝 Headlines:`, headlines);
-  console.log(`📝 Descriptions:`, descriptions);
+  logger.debug(`Parsed results: ${headlines.length} headlines, ${descriptions.length} descriptions`, {
+    provider,
+    headlineCount: headlines.length,
+    descriptionCount: descriptions.length,
+  });
+  logger.debug('Headlines:', { headlines });
+  logger.debug('Descriptions:', { descriptions });
 
   // Throw error if we didn't get enough content
   // Very lenient validation - just need at least 1 of each for manual review
@@ -388,7 +392,11 @@ export async function generateAdCopy(
     );
   }
 
-  console.log(`✅ Returning: ${headlines.slice(0, headlineCount).length} headlines, ${descriptions.slice(0, descriptionCount).length} descriptions`);
+  logger.info(`Returning: ${headlines.slice(0, headlineCount).length} headlines, ${descriptions.slice(0, descriptionCount).length} descriptions`, {
+    provider,
+    requestedHeadlines: headlineCount,
+    requestedDescriptions: descriptionCount,
+  });
 
   return {
     headlines: headlines.slice(0, headlineCount),

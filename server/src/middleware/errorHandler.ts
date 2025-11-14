@@ -8,6 +8,7 @@
 import { Request, Response, NextFunction } from 'express';
 import type { APIError } from '../types/index.js';
 import { config } from '../config/config.js';
+import logger from '../utils/logger.js';
 
 /**
  * Custom error class for API errors
@@ -76,9 +77,11 @@ export function errorHandler(
     }
   }
 
-  // Log error (in production, use proper logging service)
-  console.error(`[${requestId}] Error ${errorCode}:`, {
+  // Log error with structured logging
+  logger.error(`[${requestId}] Error ${errorCode}:`, {
+    requestId,
     statusCode,
+    errorCode,
     message: errorMessage,
     details: errorDetails,
     stack: config.nodeEnv === 'development' ? err.stack : undefined,

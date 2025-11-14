@@ -7,6 +7,7 @@ import Database from 'better-sqlite3';
 import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import logger from '../utils/logger.js';
 
 // ES module compatible __dirname
 const __filename = fileURLToPath(import.meta.url);
@@ -24,11 +25,11 @@ export function initDatabase(dbPath: string = './data/campaigns.db'): Database.D
     return db;
   }
 
-  console.log(`📦 Initializing SQLite database at: ${dbPath}`);
+  logger.info(`Initializing SQLite database at: ${dbPath}`);
 
   // Create database connection
   db = new Database(dbPath, {
-    verbose: console.log, // Log SQL queries in development
+    verbose: process.env.NODE_ENV === 'development' ? logger.debug.bind(logger) : undefined, // Log SQL queries in development
   });
 
   // Enable foreign keys
@@ -50,7 +51,7 @@ export function initDatabase(dbPath: string = './data/campaigns.db'): Database.D
     }
   })();
 
-  console.log('✅ Database initialized successfully');
+  logger.info('Database initialized successfully');
 
   return db;
 }
@@ -73,7 +74,7 @@ export function closeDatabase(): void {
   if (db) {
     db.close();
     db = null;
-    console.log('🔌 Database connection closed');
+    logger.info('Database connection closed');
   }
 }
 
@@ -84,7 +85,7 @@ export function closeDatabase(): void {
 export function resetDatabase(): void {
   const database = getDatabase();
 
-  console.warn('⚠️  Resetting database - ALL DATA WILL BE LOST');
+  logger.warn('Resetting database - ALL DATA WILL BE LOST');
 
   // Drop all tables
   database.exec('DROP TABLE IF EXISTS ads');
@@ -106,7 +107,7 @@ export function resetDatabase(): void {
     }
   })();
 
-  console.log('✅ Database reset complete');
+  logger.info('Database reset complete');
 }
 
 export default {

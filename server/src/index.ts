@@ -15,6 +15,7 @@ import { initDatabase } from './db/database';
 import { runMigration } from './db/migrate';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import logger from './utils/logger';
 
 const app = express();
 
@@ -64,15 +65,18 @@ app.use(errorHandler);
 const PORT = config.port;
 
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
-  console.log(`📱 Client: ${config.clientUrl}`);
+  logger.info(`Server running on http://localhost:${PORT}`, {
+    port: PORT,
+    environment: config.nodeEnv,
+  });
+  logger.info(`Client URL: ${config.clientUrl}`);
 
   const validation = validateConfig();
   if (!validation.valid) {
-    console.log('\n⚠️  Configuration warnings:');
-    validation.errors.forEach(err => console.log(`  - ${err}`));
-    console.log('\nServer will start but AI features may not work until configured.\n');
+    logger.warn('Configuration warnings detected:');
+    validation.errors.forEach(err => logger.warn(`  - ${err}`));
+    logger.warn('Server will start but AI features may not work until configured.');
   } else {
-    console.log('✅ Configuration valid');
+    logger.info('Configuration valid');
   }
 });

@@ -6,6 +6,7 @@
 import { Router, Request, Response } from 'express';
 import { adRepository, adGroupRepository } from '../db/repositories';
 import type { CreateAdInput, UpdateAdInput, EntityStatus } from '../db/types';
+import logger from '../utils/logger.js';
 
 const router = Router();
 
@@ -47,7 +48,7 @@ router.get('/', async (req: Request, res: Response) => {
 
     res.json(response);
   } catch (error: any) {
-    console.error('[Ads] Error fetching ads:', error);
+    logger.error('[Ads] Error fetching ads:', error);
     res.status(500).json({
       success: false,
       error: {
@@ -89,7 +90,7 @@ router.get('/:id', async (req: Request, res: Response) => {
 
     res.json(response);
   } catch (error: any) {
-    console.error('[Ads] Error fetching ad:', error);
+    logger.error('[Ads] Error fetching ad:', error);
     res.status(500).json({
       success: false,
       error: {
@@ -196,7 +197,7 @@ router.post('/', async (req: Request, res: Response) => {
 
     res.status(201).json(response);
   } catch (error: any) {
-    console.error('[Ads] Error creating ad:', error);
+    logger.error('[Ads] Error creating ad:', error);
     res.status(500).json({
       success: false,
       error: {
@@ -290,7 +291,7 @@ router.put('/:id', async (req: Request, res: Response) => {
 
     res.json(response);
   } catch (error: any) {
-    console.error('[Ads] Error updating ad:', error);
+    logger.error('[Ads] Error updating ad:', error);
     res.status(500).json({
       success: false,
       error: {
@@ -332,7 +333,7 @@ router.delete('/:id', async (req: Request, res: Response) => {
 
     res.json(response);
   } catch (error: any) {
-    console.error('[Ads] Error deleting ad:', error);
+    logger.error('[Ads] Error deleting ad:', error);
     res.status(500).json({
       success: false,
       error: {
