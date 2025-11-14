@@ -6,6 +6,7 @@
  */
 
 import { getDatabase } from '../db/database.js';
+import { logger } from '../utils/logger.js';
 
 /**
  * Clean up expired OAuth tokens from database
@@ -22,10 +23,13 @@ export function cleanupExpiredTokens(): void {
     `).run();
 
     if (result.changes > 0) {
-      console.log(`🧹 Cleaned up ${result.changes} expired OAuth tokens`);
+      logger.info('OAuth tokens cleaned up', { count: result.changes });
     }
-  } catch (error) {
-    console.error('Error cleaning up expired tokens:', error);
+  } catch (error: any) {
+    logger.error('Token cleanup error', {
+      error: error.message,
+      stack: error.stack
+    });
   }
 }
 
@@ -57,8 +61,11 @@ export function getTokenStats(): {
       used: stats.used || 0,
       expired: stats.expired || 0,
     };
-  } catch (error) {
-    console.error('Error getting token stats:', error);
+  } catch (error: any) {
+    logger.error('Error getting token stats', {
+      error: error.message,
+      stack: error.stack
+    });
     return { total: 0, unused: 0, used: 0, expired: 0 };
   }
 }

@@ -20,6 +20,7 @@ import { initDatabase } from './db/database';
 import { runMigration } from './db/migrate';
 import { runDueAutomations } from './services/automationOrchestrator';
 import { cleanupExpiredTokens } from './services/tokenCleanup';
+import { logger } from './utils/logger';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -79,30 +80,32 @@ app.use(errorHandler);
 const PORT = config.port;
 
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
-  console.log(`📱 Client: ${config.clientUrl}`);
+  logger.info('Server started', { port: PORT, env: config.nodeEnv });
+  logger.info('Client URL configured', { clientUrl: config.clientUrl });
 
   const validation = validateConfig();
   if (!validation.valid) {
-    console.log('\n⚠️  Configuration warnings:');
-    validation.errors.forEach(err => console.log(`  - ${err}`));
-    console.log('\nServer will start but AI features may not work until configured.\n');
+    logger.warn('Configuration validation failed', { errors: validation.errors });
+    logger.warn('Server will start but AI features may not work until configured');
   } else {
-    console.log('✅ Configuration valid');
+    logger.info('Configuration valid');
   }
 
   // Start automation scheduler (check every minute)
-  console.log('🤖 Starting automation scheduler...');
+  logger.info('Automation scheduler started', { interval: '60s' });
   setInterval(async () => {
     try {
       await runDueAutomations();
-    } catch (error) {
-      console.error('Error running scheduled automations:', error);
+    } catch (error: any) {
+      logger.error('Automation scheduler error', {
+        error: error.message,
+        stack: error.stack
+      });
     }
   }, 60000); // Run every minute
 
   // Start OAuth token cleanup (check every hour)
-  console.log('🧹 Starting OAuth token cleanup...');
+  logger.info('OAuth token cleanup started', { interval: '1h' });
   // Run immediately on startup
   cleanupExpiredTokens();
   // Then run every hour
