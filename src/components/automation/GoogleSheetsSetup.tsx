@@ -19,7 +19,7 @@ export default function GoogleSheetsSetup() {
 
   const checkConfiguration = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/sheets/config');
+      const response = await fetch(API_BASE_URL + '/api/sheets/config');
       const data = await response.json();
       if (data.configured) {
         setConfigured(true);
@@ -40,7 +40,7 @@ export default function GoogleSheetsSetup() {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/sheets/config`, {
+      const response = await fetch(API_BASE_URL + '/api/sheets/config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -64,7 +64,7 @@ export default function GoogleSheetsSetup() {
 
   const fetchScript = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/sheets/script');
+      const response = await fetch(API_BASE_URL + '/api/sheets/script');
       const data = await response.json();
       setScript(data.script);
     } catch (error) {
@@ -79,7 +79,7 @@ export default function GoogleSheetsSetup() {
 
   const syncNow = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/sheets/sync`, {
+      const response = await fetch(API_BASE_URL + '/api/sheets/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ dateRangeDays: 7 }),
