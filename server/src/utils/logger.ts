@@ -1,72 +1,92 @@
-/**
- * Winston Logger Configuration
- *
- * Structured logging with different levels and outputs:
- * - Console: Colorized output for development
- * - Files: Rotating log files for production (errors separate from combined logs)
- */
-
 import winston from 'winston';
 import DailyRotateFile from 'winston-daily-rotate-file';
-import { config } from '../config/config.js';
+import path from 'path';
 
-// Log format for files (JSON)
+// Define log levels
+const levels = {
+  error: 0,
+  warn: 1,
+  info: 2,
+  http: 3,
+  debug: 4,
+};
+
+// Define colors for each level
+const colors = {
+  error: 'red',
+  warn: 'yellow',
+  info: 'green',
+  http: 'magenta',
+  debug: 'blue',
+};
+
+// Tell winston about these colors
+winston.addColors(colors);
+
+// Determine log level based on environment
+const level = () => {
+  const env = process.env.NODE_ENV || 'development';
+  const isDevelopment = env === 'development';
+  return isDevelopment ? 'debug' : 'info';
+};
+
+// Define format for console output (human-readable with colors)
+const consoleFormat = winston.format.combine(
+  winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+  winston.format.colorize({ all: true }),
+  winston.format.printf(
+    (info) => `${info.timestamp} [${info.level}]: ${info.message}${
+      info.stack ? `\n${info.stack}` : ''
+    }${
+      Object.keys(info).filter(k => !['timestamp', 'level', 'message', 'stack'].includes(k)).length > 0
+        ? `\n${JSON.stringify(
+            Object.fromEntries(
+              Object.entries(info).filter(([k]) => !['timestamp', 'level', 'message', 'stack', 'splat', Symbol.for('level')].includes(k as any))
+            ),
+            null,
+            2
+          )}`
+        : ''
+    }`
+  )
+);
+
+// Define format for file output (JSON for easy parsing)
 const fileFormat = winston.format.combine(
   winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
   winston.format.errors({ stack: true }),
-  winston.format.splat(),
   winston.format.json()
 );
 
-// Log format for console (human-readable, colorized)
-const consoleFormat = winston.format.combine(
-  winston.format.colorize(),
-  winston.format.timestamp({ format: 'HH:mm:ss' }),
-  winston.format.printf(({ level, message, timestamp, ...meta }) => {
-    let msg = `${timestamp} [${level}]: ${message}`;
-
-    // Add metadata if present
-    const metaKeys = Object.keys(meta).filter(key => key !== 'timestamp' && key !== 'level' && key !== 'message');
-    if (metaKeys.length > 0) {
-      const metaObj: Record<string, any> = {};
-      metaKeys.forEach(key => {
-        metaObj[key] = meta[key];
-      });
-      msg += ` ${JSON.stringify(metaObj)}`;
-    }
-
-    return msg;
-  })
-);
-
-// Transports array
+// Create transports array
 const transports: winston.transport[] = [
-  // Console transport (always enabled)
+  // Console transport for all environments
   new winston.transports.Console({
     format: consoleFormat,
-    level: config.nodeEnv === 'production' ? 'info' : 'debug',
   }),
 ];
 
-// Add file logging in production
-if (config.nodeEnv === 'production') {
-  // Error log file (errors only)
+// Add file transports only in production
+if (process.env.NODE_ENV === 'production') {
+  const logsDir = path.join(__dirname, '../../logs');
+
+  // Transport for error logs only
   transports.push(
     new DailyRotateFile({
-      filename: 'logs/error-%DATE%.log',
+      filename: path.join(logsDir, 'error-%DATE%.log'),
       datePattern: 'YYYY-MM-DD',
       level: 'error',
       format: fileFormat,
-      maxSize: '20m', // 20MB max file size
-      maxFiles: '14d', // Keep 14 days of logs
-      zippedArchive: true, // Compress old logs
+      maxSize: '20m',
+      maxFiles: '14d',
+      zippedArchive: true,
     })
   );
 
-  // Combined log file (all levels)
+  // Transport for all logs
   transports.push(
     new DailyRotateFile({
-      filename: 'logs/combined-%DATE%.log',
+      filename: path.join(logsDir, 'combined-%DATE%.log'),
       datePattern: 'YYYY-MM-DD',
       format: fileFormat,
       maxSize: '20m',
@@ -76,43 +96,52 @@ if (config.nodeEnv === 'production') {
   );
 }
 
-// Create logger instance
-export const logger = winston.createLogger({
-  level: 'info',
-  format: fileFormat,
+// Create the logger
+const logger = winston.createLogger({
+  level: level(),
+  levels,
   transports,
-  // Don't exit on uncaught exceptions
+  // Handle uncaught exceptions
+  exceptionHandlers: [
+    new winston.transports.Console({
+      format: consoleFormat,
+    }),
+  ],
+  // Handle unhandled promise rejections
+  rejectionHandlers: [
+    new winston.transports.Console({
+      format: consoleFormat,
+    }),
+  ],
+  // Don't exit on handled exceptions
   exitOnError: false,
 });
 
-// Log unhandled rejections and exceptions
-process.on('unhandledRejection', (reason: any, promise: Promise<any>) => {
-  logger.error('Unhandled Promise Rejection', {
-    reason: reason?.message || reason,
-    stack: reason?.stack,
-    promise: promise.toString(),
-  });
-});
+// Add file exception handlers in production
+if (process.env.NODE_ENV === 'production') {
+  const logsDir = path.join(__dirname, '../../logs');
 
-process.on('uncaughtException', (error: Error) => {
-  logger.error('Uncaught Exception', {
-    error: error.message,
-    stack: error.stack,
-  });
-  // Exit after logging (uncaught exceptions are fatal)
-  process.exit(1);
-});
+  logger.exceptions.handle(
+    new DailyRotateFile({
+      filename: path.join(logsDir, 'exceptions-%DATE%.log'),
+      datePattern: 'YYYY-MM-DD',
+      format: fileFormat,
+      maxSize: '20m',
+      maxFiles: '14d',
+      zippedArchive: true,
+    })
+  );
 
-// Export convenience methods
+  logger.rejections.handle(
+    new DailyRotateFile({
+      filename: path.join(logsDir, 'rejections-%DATE%.log'),
+      datePattern: 'YYYY-MM-DD',
+      format: fileFormat,
+      maxSize: '20m',
+      maxFiles: '14d',
+      zippedArchive: true,
+    })
+  );
+}
+
 export default logger;
-
-/**
- * Example usage:
- *
- * import { logger } from './utils/logger';
- *
- * logger.info('Server started', { port: 3001, env: 'production' });
- * logger.error('Database error', { error: err.message, stack: err.stack });
- * logger.debug('Processing request', { userId: '123', action: 'create_campaign' });
- * logger.warn('Rate limit approaching', { remaining: 10, limit: 100 });
- */

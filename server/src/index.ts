@@ -20,7 +20,7 @@ import { initDatabase } from './db/database';
 import { runMigration } from './db/migrate';
 import { runDueAutomations } from './services/automationOrchestrator';
 import { cleanupExpiredTokens } from './services/tokenCleanup';
-import { logger } from './utils/logger';
+import logger from './utils/logger';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -80,13 +80,17 @@ app.use(errorHandler);
 const PORT = config.port;
 
 app.listen(PORT, () => {
-  logger.info('Server started', { port: PORT, env: config.nodeEnv });
-  logger.info('Client URL configured', { clientUrl: config.clientUrl });
+  logger.info(`Server running on http://localhost:${PORT}`, {
+    port: PORT,
+    environment: config.nodeEnv,
+  });
+  logger.info(`Client URL: ${config.clientUrl}`);
 
   const validation = validateConfig();
   if (!validation.valid) {
-    logger.warn('Configuration validation failed', { errors: validation.errors });
-    logger.warn('Server will start but AI features may not work until configured');
+    logger.warn('Configuration warnings detected:');
+    validation.errors.forEach(err => logger.warn(`  - ${err}`));
+    logger.warn('Server will start but AI features may not work until configured.');
   } else {
     logger.info('Configuration valid');
   }

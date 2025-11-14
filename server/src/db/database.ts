@@ -7,6 +7,7 @@ import Database from 'better-sqlite3';
 import { readFileSync, readdirSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import logger from '../utils/logger.js';
 
 // ES module compatible __dirname
 const __filename = fileURLToPath(import.meta.url);
@@ -22,7 +23,7 @@ function runMigrations(database: Database.Database): void {
   const migrationsPath = join(__dirname, 'migrations');
 
   if (!existsSync(migrationsPath)) {
-    console.log('📦 No migrations folder found, skipping migrations');
+    logger.info('No migrations folder found, skipping migrations');
     return;
   }
 
@@ -47,11 +48,11 @@ function runMigrations(database: Database.Database): void {
       .get(file);
 
     if (alreadyApplied) {
-      console.log(`⏭️  Migration ${file} already applied, skipping`);
+      logger.debug(`Migration ${file} already applied, skipping`);
       continue;
     }
 
-    console.log(`🔄 Running migration: ${file}`);
+    logger.info(`Running migration: ${file}`);
 
     const migrationPath = join(migrationsPath, file);
     const migration = readFileSync(migrationPath, 'utf-8');
@@ -88,9 +89,9 @@ function runMigrations(database: Database.Database): void {
           .run(file);
       })();
 
-      console.log(`✅ Migration ${file} applied successfully`);
+      logger.info(`Migration ${file} applied successfully`);
     } catch (error) {
-      console.error(`❌ Failed to apply migration ${file}:`, error);
+      logger.error(`Failed to apply migration ${file}:`, { error });
       throw error;
     }
   }
@@ -105,11 +106,11 @@ export function initDatabase(dbPath: string = './data/campaigns.db'): Database.D
     return db;
   }
 
-  console.log(`📦 Initializing SQLite database at: ${dbPath}`);
+  logger.info(`Initializing SQLite database at: ${dbPath}`);
 
   // Create database connection
   db = new Database(dbPath, {
-    verbose: console.log, // Log SQL queries in development
+    verbose: process.env.NODE_ENV === 'development' ? logger.debug.bind(logger) : undefined, // Log SQL queries in development
   });
 
   // Enable foreign keys
@@ -134,7 +135,7 @@ export function initDatabase(dbPath: string = './data/campaigns.db'): Database.D
   // Run migrations
   runMigrations(db);
 
-  console.log('✅ Database initialized successfully');
+  logger.info('Database initialized successfully');
 
   return db;
 }
@@ -157,7 +158,7 @@ export function closeDatabase(): void {
   if (db) {
     db.close();
     db = null;
-    console.log('🔌 Database connection closed');
+    logger.info('Database connection closed');
   }
 }
 
@@ -168,7 +169,7 @@ export function closeDatabase(): void {
 export function resetDatabase(): void {
   const database = getDatabase();
 
-  console.warn('⚠️  Resetting database - ALL DATA WILL BE LOST');
+  logger.warn('Resetting database - ALL DATA WILL BE LOST');
 
   // Drop all tables
   database.exec('DROP TABLE IF EXISTS ads');
@@ -190,7 +191,7 @@ export function resetDatabase(): void {
     }
   })();
 
-  console.log('✅ Database reset complete');
+  logger.info('Database reset complete');
 }
 
 export default {

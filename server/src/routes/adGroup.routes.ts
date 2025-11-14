@@ -6,6 +6,7 @@
 import { Router, Request, Response } from 'express';
 import { adGroupRepository, campaignRepository, adRepository } from '../db/repositories';
 import type { CreateAdGroupInput, UpdateAdGroupInput, EntityStatus } from '../db/types';
+import logger from '../utils/logger.js';
 
 const router = Router();
 
@@ -35,7 +36,7 @@ router.get('/', async (req: Request, res: Response) => {
 
     res.json(response);
   } catch (error: any) {
-    console.error('[AdGroups] Error fetching ad groups:', error);
+    logger.error('[AdGroups] Error fetching ad groups:', error);
     res.status(500).json({
       success: false,
       error: {
@@ -77,7 +78,7 @@ router.get('/:id', async (req: Request, res: Response) => {
 
     res.json(response);
   } catch (error: any) {
-    console.error('[AdGroups] Error fetching ad group:', error);
+    logger.error('[AdGroups] Error fetching ad group:', error);
     res.status(500).json({
       success: false,
       error: {
@@ -126,7 +127,7 @@ router.get('/:id/ads', async (req: Request, res: Response) => {
 
     res.json(response);
   } catch (error: any) {
-    console.error('[AdGroups] Error fetching ads:', error);
+    logger.error('[AdGroups] Error fetching ads:', error);
     res.status(500).json({
       success: false,
       error: {
@@ -221,7 +222,7 @@ router.post('/', async (req: Request, res: Response) => {
 
     res.status(201).json(response);
   } catch (error: any) {
-    console.error('[AdGroups] Error creating ad group:', error);
+    logger.error('[AdGroups] Error creating ad group:', error);
     res.status(500).json({
       success: false,
       error: {
@@ -303,7 +304,7 @@ router.put('/:id', async (req: Request, res: Response) => {
 
     res.json(response);
   } catch (error: any) {
-    console.error('[AdGroups] Error updating ad group:', error);
+    logger.error('[AdGroups] Error updating ad group:', error);
     res.status(500).json({
       success: false,
       error: {
@@ -345,7 +346,7 @@ router.delete('/:id', async (req: Request, res: Response) => {
 
     res.json(response);
   } catch (error: any) {
-    console.error('[AdGroups] Error deleting ad group:', error);
+    logger.error('[AdGroups] Error deleting ad group:', error);
     res.status(500).json({
       success: false,
       error: {

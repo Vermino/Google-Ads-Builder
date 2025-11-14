@@ -6,12 +6,13 @@
 import { getDatabase, initDatabase } from './database.js';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import logger from '../utils/logger.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 function runMigration() {
-  console.log('🔄 Running database migration...');
+  logger.info('Running database migration...');
 
   // Initialize database
   const dbPath = join(__dirname, '../../data/campaigns.db');
@@ -35,19 +36,19 @@ function runMigration() {
   let addedCount = 0;
   for (const column of columnsToAdd) {
     if (!existingColumns.includes(column.name)) {
-      console.log(`  Adding column: ${column.name}`);
+      logger.info(`Adding column: ${column.name}`);
       try {
         db.exec(column.sql);
         addedCount++;
       } catch (error: any) {
-        console.error(`  Error adding ${column.name}:`, error.message);
+        logger.error(`Error adding column ${column.name}:`, { error: error.message });
       }
     } else {
-      console.log(`  Column already exists: ${column.name}`);
+      logger.debug(`Column already exists: ${column.name}`);
     }
   }
 
-  console.log(`✅ Migration complete! Added ${addedCount} new columns.`);
+  logger.info(`Migration complete! Added ${addedCount} new columns.`);
 }
 
 // Run migration if called directly
