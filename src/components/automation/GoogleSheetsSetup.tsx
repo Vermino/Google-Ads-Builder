@@ -40,7 +40,7 @@ export default function GoogleSheetsSetup() {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/sheets/config', {
+      const response = await fetch(`${API_BASE_URL}/api/sheets/config`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
