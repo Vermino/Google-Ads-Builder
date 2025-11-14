@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { TrendingUp, AlertCircle, Lightbulb, BarChart3, DollarSign, MousePointerClick } from 'lucide-react';
 import type { Campaign } from '@/types';
+import { getAPIBaseURL } from '../../services/apiClient';
 
 interface Recommendation {
   id: string;
@@ -25,6 +26,7 @@ interface CampaignAnalyticsProps {
 }
 
 export default function CampaignAnalytics({ campaign }: CampaignAnalyticsProps) {
+  const API_BASE_URL = getAPIBaseURL();
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [stats, setStats] = useState<CampaignStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -38,7 +40,7 @@ export default function CampaignAnalytics({ campaign }: CampaignAnalyticsProps) 
     try {
       // Fetch recommendations
       const recsResponse = await fetch(
-        `http://localhost:3001/api/recommendations?campaignId=${campaign.id}&status=pending`
+        `${API_BASE_URL}/api/recommendations?campaignId=${campaign.id}&status=pending`
       );
       if (recsResponse.ok) {
         const recsData = await recsResponse.json();
@@ -47,7 +49,7 @@ export default function CampaignAnalytics({ campaign }: CampaignAnalyticsProps) 
 
       // Fetch performance stats (mock data if not available)
       const statsResponse = await fetch(
-        `http://localhost:3001/api/performance/campaigns/${campaign.id}`
+        `${API_BASE_URL}/api/performance/campaigns/${campaign.id}`
       );
       if (statsResponse.ok) {
         const statsData = await statsResponse.json();

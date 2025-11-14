@@ -3,6 +3,7 @@ import { Plus, Play, Trash2, Edit2, Power, Clock, AlertCircle } from 'lucide-rea
 import Button from '../common/Button';
 import Modal from '../common/Modal';
 import CreateRuleModal from './CreateRuleModal';
+import { getAPIBaseURL } from '../../services/apiClient';
 
 interface AutomationRule {
   id: string;
@@ -17,6 +18,7 @@ interface AutomationRule {
 }
 
 export default function AutomationRules() {
+  const API_BASE_URL = getAPIBaseURL();
   const [rules, setRules] = useState<AutomationRule[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -28,7 +30,7 @@ export default function AutomationRules() {
 
   const loadRules = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/automation/rules');
+      const response = await fetch(`${API_BASE_URL}/api/automation/rules`);
       const data = await response.json();
       setRules(data.rules || []);
     } catch (error) {
@@ -42,7 +44,7 @@ export default function AutomationRules() {
     setExecutingId(ruleId);
     try {
       const response = await fetch(
-        `http://localhost:3001/api/automation/rules/${ruleId}/execute`,
+        `${API_BASE_URL}/api/automation/rules/${ruleId}/execute`,
         { method: 'POST' }
       );
       const data = await response.json();
@@ -62,7 +64,7 @@ export default function AutomationRules() {
 
   const toggleRule = async (ruleId: string, enabled: boolean) => {
     try {
-      await fetch(`http://localhost:3001/api/automation/rules/${ruleId}`, {
+      await fetch(`${API_BASE_URL}/api/automation/rules/${ruleId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ enabled: !enabled }),
@@ -77,7 +79,7 @@ export default function AutomationRules() {
     if (!confirm('Are you sure you want to delete this automation rule?')) return;
 
     try {
-      await fetch(`http://localhost:3001/api/automation/rules/${ruleId}`, {
+      await fetch(`${API_BASE_URL}/api/automation/rules/${ruleId}`, {
         method: 'DELETE',
       });
       loadRules();

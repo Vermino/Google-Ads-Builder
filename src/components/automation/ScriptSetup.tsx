@@ -10,6 +10,7 @@ import {
   Activity,
   ExternalLink
 } from 'lucide-react';
+import { getAPIBaseURL } from '../../services/apiClient';
 
 interface ScriptStatus {
   isActive: boolean;
@@ -25,10 +26,11 @@ interface ScriptStatus {
 }
 
 export default function ScriptSetup() {
+  const API_BASE_URL = getAPIBaseURL();
   const [accountId, setAccountId] = useState('');
   const [spreadsheetId, setSpreadsheetId] = useState('');
   const [spreadsheetUrl, setSpreadsheetUrl] = useState('');
-  const [backendUrl, setBackendUrl] = useState('http://localhost:3001');
+  const [backendUrl, setBackendUrl] = useState(API_BASE_URL);
   const [generatedScript, setGeneratedScript] = useState('');
   const [copied, setCopied] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -60,7 +62,8 @@ export default function ScriptSetup() {
     // Listen for OAuth callback from popup
     const handleMessage = (event: MessageEvent) => {
       // Verify origin for security (adjust for production)
-      if (event.origin !== window.location.origin && event.origin !== 'http://localhost:3001') {
+      const apiOrigin = new URL(API_BASE_URL).origin;
+      if (event.origin !== window.location.origin && event.origin !== apiOrigin) {
         return;
       }
 
@@ -80,7 +83,7 @@ export default function ScriptSetup() {
   const loadStatus = async (accId: string) => {
     setLoadingStatus(true);
     try {
-      const response = await fetch(`http://localhost:3001/api/script/status/${accId}`);
+      const response = await fetch(`${API_BASE_URL}/api/script/status/${accId}`);
       if (response.ok) {
         const data = await response.json();
         setStatus(data);
@@ -100,7 +103,7 @@ export default function ScriptSetup() {
 
     setGenerating(true);
     try {
-      const response = await fetch('http://localhost:3001/api/script/generate', {
+      const response = await fetch(`${API_BASE_URL}/api/script/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -138,7 +141,7 @@ export default function ScriptSetup() {
   const handleConnectGoogleSheets = async () => {
     try {
       // Get OAuth URL from backend
-      const response = await fetch('http://localhost:3001/api/sheets-oauth/auth-url');
+      const response = await fetch(`${API_BASE_URL}/api/sheets-oauth/auth-url`);
       if (response.ok) {
         const data = await response.json();
         // Open OAuth popup
@@ -162,7 +165,7 @@ export default function ScriptSetup() {
   const handleOAuthCallback = async (tokenId: string) => {
     setCreatingSheet(true);
     try {
-      const response = await fetch('http://localhost:3001/api/sheets-oauth/create-spreadsheet', {
+      const response = await fetch(`${API_BASE_URL}/api/sheets-oauth/create-spreadsheet`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

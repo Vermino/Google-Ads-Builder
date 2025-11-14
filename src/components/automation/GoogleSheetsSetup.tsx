@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import { Sheet, CheckCircle, Copy, AlertCircle } from 'lucide-react';
 import Button from '../common/Button';
 import Input from '../common/Input';
+import { getAPIBaseURL } from '../../services/apiClient';
 
 export default function GoogleSheetsSetup() {
+  const API_BASE_URL = getAPIBaseURL();
   const [configured, setConfigured] = useState(false);
   const [loading, setLoading] = useState(true);
   const [spreadsheetId, setSpreadsheetId] = useState('');
@@ -17,7 +19,7 @@ export default function GoogleSheetsSetup() {
 
   const checkConfiguration = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/sheets/config');
+      const response = await fetch(`${API_BASE_URL}/api/sheets/config');
       const data = await response.json();
       if (data.configured) {
         setConfigured(true);
@@ -38,7 +40,7 @@ export default function GoogleSheetsSetup() {
     }
 
     try {
-      const response = await fetch('http://localhost:3001/api/sheets/config', {
+      const response = await fetch(`${API_BASE_URL}/api/sheets/config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -62,7 +64,7 @@ export default function GoogleSheetsSetup() {
 
   const fetchScript = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/sheets/script');
+      const response = await fetch(`${API_BASE_URL}/api/sheets/script');
       const data = await response.json();
       setScript(data.script);
     } catch (error) {
@@ -77,7 +79,7 @@ export default function GoogleSheetsSetup() {
 
   const syncNow = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/sheets/sync', {
+      const response = await fetch(`${API_BASE_URL}/api/sheets/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ dateRangeDays: 7 }),

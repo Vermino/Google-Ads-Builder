@@ -3,6 +3,7 @@ import Modal from '../common/Modal';
 import Button from '../common/Button';
 import Input from '../common/Input';
 import { AlertCircle, Sparkles } from 'lucide-react';
+import { getAPIBaseURL } from '../../services/apiClient';
 
 interface CreateRuleModalProps {
   onClose: () => void;
@@ -10,6 +11,7 @@ interface CreateRuleModalProps {
 }
 
 export default function CreateRuleModal({ onClose, onSuccess }: CreateRuleModalProps) {
+  const API_BASE_URL = getAPIBaseURL();
   const [step, setStep] = useState(1);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -63,7 +65,7 @@ export default function CreateRuleModal({ onClose, onSuccess }: CreateRuleModalP
           break;
       }
 
-      const response = await fetch('http://localhost:3001/api/automation/rules', {
+      const response = await fetch(`${API_BASE_URL}/api/automation/rules`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

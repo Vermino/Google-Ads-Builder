@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Clock, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
+import { getAPIBaseURL } from '../../services/apiClient';
 
 interface HistoryItem {
   id: string;
@@ -15,6 +16,7 @@ interface HistoryItem {
 }
 
 export default function AutomationHistory() {
+  const API_BASE_URL = getAPIBaseURL();
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -24,7 +26,7 @@ export default function AutomationHistory() {
 
   const loadHistory = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/automation/history?limit=50');
+      const response = await fetch(`${API_BASE_URL}/api/automation/history?limit=50`);
       const data = await response.json();
       setHistory(data.history || []);
     } catch (error) {

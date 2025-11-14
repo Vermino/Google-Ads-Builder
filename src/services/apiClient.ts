@@ -248,6 +248,14 @@ function getAPIConfig(): APIConfig {
   };
 }
 
+/**
+ * Get API base URL for direct fetch calls
+ * Use this when you need to make manual fetch calls instead of using the apiClient methods
+ */
+export function getAPIBaseURL(): string {
+  return import.meta.env.VITE_API_URL || 'http://localhost:3001';
+}
+
 /* ==================== EXPORTS ==================== */
 
 /**

@@ -1,8 +1,10 @@
 import { useState, useRef } from 'react';
 import { Upload, FileText, CheckCircle, XCircle, Clock } from 'lucide-react';
 import Button from '../common/Button';
+import { getAPIBaseURL } from '../../services/apiClient';
 
 export default function ImportManager() {
+  const API_BASE_URL = getAPIBaseURL();
   const [file, setFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState<any>(null);
@@ -33,7 +35,7 @@ export default function ImportManager() {
       formData.append('updateExisting', 'false');
       formData.append('createSnapshot', 'true');
 
-      const response = await fetch('http://localhost:3001/api/import/editor', {
+      const response = await fetch(`${API_BASE_URL}/api/import/editor`, {
         method: 'POST',
         body: formData,
       });

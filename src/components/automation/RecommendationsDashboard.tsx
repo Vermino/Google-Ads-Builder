@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Lightbulb, CheckCircle, XCircle, AlertTriangle, Sparkles, RefreshCw } from 'lucide-react';
 import Button from '../common/Button';
+import { getAPIBaseURL } from '../../services/apiClient';
 
 interface Recommendation {
   id: string;
@@ -14,6 +15,7 @@ interface Recommendation {
 }
 
 export default function RecommendationsDashboard() {
+  const API_BASE_URL = getAPIBaseURL();
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
@@ -25,7 +27,7 @@ export default function RecommendationsDashboard() {
 
   const loadRecommendations = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/recommendations?limit=100');
+      const response = await fetch(`${API_BASE_URL}/api/recommendations?limit=100`);
       const data = await response.json();
       setRecommendations(data.recommendations || []);
     } catch (error) {
@@ -38,7 +40,7 @@ export default function RecommendationsDashboard() {
   const generateRecommendations = async () => {
     setGenerating(true);
     try {
-      const response = await fetch('http://localhost:3001/api/recommendations/generate', {
+      const response = await fetch(`${API_BASE_URL}/api/recommendations/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -65,7 +67,7 @@ export default function RecommendationsDashboard() {
     if (!confirm('Apply this recommendation?')) return;
 
     try {
-      const response = await fetch(`http://localhost:3001/api/recommendations/${id}/apply`, {
+      const response = await fetch(`${API_BASE_URL}/api/recommendations/${id}/apply`, {
         method: 'POST',
       });
 
@@ -83,7 +85,7 @@ export default function RecommendationsDashboard() {
 
   const dismissRecommendation = async (id: string) => {
     try {
-      await fetch(`http://localhost:3001/api/recommendations/${id}/status`, {
+      await fetch(`${API_BASE_URL}/api/recommendations/${id}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'dismissed' }),
