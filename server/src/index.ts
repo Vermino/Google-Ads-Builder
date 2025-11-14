@@ -19,6 +19,7 @@ import { getAvailableProviders } from './services/aiService';
 import { initDatabase } from './db/database';
 import { runMigration } from './db/migrate';
 import { runDueAutomations } from './services/automationOrchestrator';
+import { cleanupExpiredTokens } from './services/tokenCleanup';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -99,4 +100,13 @@ app.listen(PORT, () => {
       console.error('Error running scheduled automations:', error);
     }
   }, 60000); // Run every minute
+
+  // Start OAuth token cleanup (check every hour)
+  console.log('🧹 Starting OAuth token cleanup...');
+  // Run immediately on startup
+  cleanupExpiredTokens();
+  // Then run every hour
+  setInterval(() => {
+    cleanupExpiredTokens();
+  }, 60 * 60 * 1000); // Run every hour
 });

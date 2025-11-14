@@ -1,6 +1,8 @@
 import express from 'express';
 import { google } from 'googleapis';
 import { config } from '../config/config.js';
+import { getDatabase } from '../db/database.js';
+import { nanoid } from 'nanoid';
 
 const router = express.Router();
 
@@ -51,10 +53,15 @@ router.get('/callback', async (req, res) => {
     const { tokens } = await oauth2Client.getToken(code as string);
     oauth2Client.setCredentials(tokens);
 
-    // Store tokens temporarily (in production, store in database)
-    const tokenId = 'token-' + Date.now();
-    global.tempTokens = global.tempTokens || {};
-    (global as any).tempTokens[tokenId] = tokens;
+    // Store tokens in database (persists across server restarts)
+    const db = getDatabase();
+    const tokenId = nanoid();
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString(); // 1 hour from now
+
+    db.prepare(`
+      INSERT INTO oauth_tokens (id, token_data, expires_at)
+      VALUES (?, ?, ?)
+    `).run(tokenId, JSON.stringify(tokens), expiresAt);
 
     // Set CSP to allow inline script for this page only
     res.setHeader(
@@ -180,13 +187,28 @@ router.post('/create-spreadsheet', async (req, res) => {
       return res.status(400).json({ error: 'Token ID is required' });
     }
 
-    // Retrieve tokens
-    const tokens = (global as any).tempTokens?.[tokenId];
-    if (!tokens) {
+    // Retrieve tokens from database
+    const db = getDatabase();
+    const tokenRow: any = db.prepare(`
+      SELECT token_data, expires_at, used
+      FROM oauth_tokens
+      WHERE id = ? AND used = 0
+    `).get(tokenId);
+
+    if (!tokenRow) {
       return res.status(400).json({ error: 'Invalid or expired token' });
     }
 
+    // Check if token is expired
+    if (new Date(tokenRow.expires_at) < new Date()) {
+      return res.status(400).json({ error: 'Token expired. Please reconnect Google Sheets.' });
+    }
+
+    const tokens = JSON.parse(tokenRow.token_data);
     oauth2Client.setCredentials(tokens);
+
+    // Mark token as used (prevents reuse)
+    db.prepare(`UPDATE oauth_tokens SET used = 1 WHERE id = ?`).run(tokenId);
 
     // Create sheets API client
     const sheets = google.sheets({ version: 'v4', auth: oauth2Client });
