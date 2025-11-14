@@ -6,7 +6,7 @@
  */
 
 import { getDatabase } from '../db/database.js';
-import { logger } from '../utils/logger.js';
+import logger from '../utils/logger.js';
 
 /**
  * Clean up expired OAuth tokens from database
